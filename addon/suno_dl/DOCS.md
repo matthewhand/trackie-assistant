@@ -1,8 +1,8 @@
 # Trackie Assistant
 
-Linux preview: add-on **1.6.2-rc1**, package **1.6.2rc1**.
+Linux preview: add-on **1.6.2-rc2**, package **1.6.2rc2**.
 
-> **Linux preview 1.6.2rc1:** Linux audio sync and previews verify producers from each clip's own canonical page and publish prepared file groups. Existing-file repairs require the reviewed offline migration. This release targets Python 3.13 on Linux; container and HAOS add-on validation covers AMD64. Indexed recordings are reused unchanged. See the release notes for discovery and repair limits.
+> **Linux preview 1.6.2rc2:** Linux audio sync and previews verify producers from each clip's own canonical page and publish prepared file groups. Existing-file repairs require the reviewed offline migration. This release targets Python 3.13 on Linux; container and HAOS add-on validation covers AMD64. Indexed recordings are reused unchanged. See the release notes for discovery and repair limits.
 
 ### Current Linux candidate scope
 

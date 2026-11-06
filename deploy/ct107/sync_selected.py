@@ -31,7 +31,15 @@ class ProviderStop(BaseException):
     """Refusal/backpressure stops the run, including through ordinary catch handlers."""
 
 
-async def run(root: Path, audit: Path, run_id: str, playlists: list[str], blocked: Path) -> int:
+async def run(
+    root: Path,
+    audit: Path,
+    run_id: str,
+    playlists: list[str],
+    blocked: Path,
+    *,
+    expected_missing: frozenset[str] | None = None,
+) -> int:
     if not UUID_RE.fullmatch(run_id) or any(not UUID_RE.fullmatch(p) for p in playlists):
         raise ValueError("Expected explicit playlist and run UUIDs")
     owned = False
@@ -136,6 +144,10 @@ async def run(root: Path, audit: Path, run_id: str, playlists: list[str], blocke
                 t for t in tracks_by_id.values() if t.id not in excluded and t.id not in blocked_ids
             ]
             missing = [t for t in selected if index.get(t.id) is None]
+            if expected_missing is not None and {t.id for t in missing} != expected_missing:
+                raise ValueError(
+                    "Missing clips differ from the approved resume set; no transfers started"
+                )
             queued = list(missing)
             status.update(
                 total=len(selected),
@@ -258,11 +270,31 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--playlist", action="append", required=True)
     parser.add_argument("--blocked", type=Path, required=True)
+    parser.add_argument(
+        "--expected-missing",
+        action="append",
+        help="Resume only if the missing clip UUIDs exactly match this repeatable list.",
+    )
     args = parser.parse_args()
+    if args.expected_missing is not None and any(
+        not UUID_RE.fullmatch(cid) for cid in args.expected_missing
+    ):
+        parser.error("--expected-missing requires clip UUIDs")
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
     raise SystemExit(
-        asyncio.run(run(args.library, args.audit, args.run_id, args.playlist, args.blocked))
+        asyncio.run(
+            run(
+                args.library,
+                args.audit,
+                args.run_id,
+                args.playlist,
+                args.blocked,
+                expected_missing=(
+                    frozenset(args.expected_missing) if args.expected_missing is not None else None
+                ),
+            )
+        )
     )
 
 

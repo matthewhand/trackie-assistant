@@ -538,6 +538,30 @@ def _write_artist(path: Path, extension: str, artist: str) -> None:
         raise MigrationError("Unsupported audio format")
 
 
+def _supported_audio_streams(streams: list[dict], *, allow_cover: bool) -> tuple[dict, dict | None]:
+    """Accept one audio track and, for MP4 only, one bounded attached JPEG/PNG."""
+    audio = [stream for stream in streams if stream.get("codec_type") == "audio"]
+    other = [stream for stream in streams if stream.get("codec_type") != "audio"]
+    if len(audio) != 1:
+        raise MigrationError("Only a single audio stream is supported")
+    cover = other[0] if len(other) == 1 else None
+    if other and (
+        not allow_cover
+        or len(other) != 1
+        or cover is None
+        or cover.get("codec_type") != "video"
+        or cover.get("codec_name") not in {"mjpeg", "png"}
+        or cover.get("disposition", {}).get("attached_pic") != 1
+        or not isinstance(cover.get("width"), int)
+        or not isinstance(cover.get("height"), int)
+        or not 0 < cover["width"] <= 16384
+        or not 0 < cover["height"] <= 16384
+        or cover["width"] * cover["height"] > 32_000_000
+    ):
+        raise MigrationError("Unsupported artwork or multiple media streams")
+    return audio[0], cover
+
+
 def _audio_signature(path: Path) -> str:
     probe = shutil.which("ffprobe")
     ffmpeg = shutil.which("ffmpeg")
@@ -551,8 +575,7 @@ def _audio_signature(path: Path) -> str:
             timeout=60,
         )
         streams = json.loads(result.stdout)["streams"]
-        if len(streams) != 1 or streams[0].get("codec_type") != "audio":
-            raise MigrationError("Only a single audio stream is supported")
+        _supported_audio_streams(streams, allow_cover=True)
         result = run_media_process(
             [
                 ffmpeg,
@@ -581,7 +604,7 @@ def _audio_signature(path: Path) -> str:
 
 
 def _metadata_fingerprint(path: Path, extension: str) -> tuple:
-    """Conservatively verify inspected non-artist tags and reject artwork/chapters."""
+    """Verify non-artist metadata, including one supported MP4 attached cover."""
     probe = shutil.which("ffprobe")
     if not probe:
         raise MigrationError("ffprobe is required for metadata verification")
@@ -606,8 +629,9 @@ def _metadata_fingerprint(path: Path, extension: str) -> tuple:
         if details.get("chapters"):
             raise MigrationError("Audio chapters require manual handling")
         streams = details.get("streams", [])
-        if len(streams) != 1 or streams[0].get("codec_type") != "audio":
-            raise MigrationError("Artwork or multiple media streams require manual handling")
+        audio_stream, cover_stream = _supported_audio_streams(
+            streams, allow_cover=extension in {".m4a", ".mp4"}
+        )
 
         def without_artist(tags: dict) -> tuple:
             return tuple(
@@ -616,10 +640,19 @@ def _metadata_fingerprint(path: Path, extension: str) -> tuple:
 
         probed = (
             without_artist(details.get("format", {}).get("tags", {})),
-            without_artist(streams[0].get("tags", {})),
+            without_artist(audio_stream.get("tags", {})),
+            (
+                cover_stream.get("codec_name"),
+                cover_stream.get("width"),
+                cover_stream.get("height"),
+                tuple(sorted(cover_stream.get("disposition", {}).items())),
+                tuple(sorted(cover_stream.get("tags", {}).items())),
+            )
+            if cover_stream
+            else None,
         )
         if extension in {".m4a", ".mp4"}:
-            from mutagen.mp4 import MP4
+            from mutagen.mp4 import MP4, MP4Cover
 
             native = MP4(path).tags
             excluded = {"\xa9ART"}
@@ -638,10 +671,30 @@ def _metadata_fingerprint(path: Path, extension: str) -> tuple:
         values = []
         native_items: list[tuple[str, Any]] = list(native.items()) if native is not None else []
         for key, value in native_items:
-            if key == "covr" or key.startswith(("APIC", "CHAP", "CTOC")):
+            if key == "covr":
+                from .lossless_mp4 import cover_data_type
+
+                if (
+                    extension not in {".m4a", ".mp4"}
+                    or cover_stream is None
+                    or not isinstance(value, list)
+                    or len(value) != 1
+                    or not isinstance(value[0], MP4Cover)
+                ):
+                    raise MigrationError("Unsupported embedded cover metadata")
+                image = value[0]
+                image_type = cover_data_type(bytes(image))
+                expected_codec = {13: "mjpeg", 14: "png"}[image_type]
+                if image.imageformat != image_type or cover_stream["codec_name"] != expected_codec:
+                    raise MigrationError("Embedded cover and probed image disagree")
+                values.append((key, repr((image_type, _digest(bytes(image))))))
+                continue
+            if key.startswith(("APIC", "CHAP", "CTOC")):
                 raise MigrationError("Artwork or chapters require manual handling")
             if key not in excluded:
                 values.append((key, repr(value)))
+        if cover_stream is not None and not any(key == "covr" for key, _ in native_items):
+            raise MigrationError("Attached image is not a native MP4 cover")
         return probed, tuple(sorted(values))
     except MigrationError:
         raise

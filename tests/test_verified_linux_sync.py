@@ -241,6 +241,13 @@ async def test_end_to_end_download_tags_then_resume_without_second_transfer(
         return httpx.Response(200, content=payload)
 
     mock_http(handler)
+    # This tests publication/recovery, not the host's current disk capacity.
+    usage = sync.shutil.disk_usage(library)
+    monkeypatch.setattr(
+        sync.shutil,
+        "disk_usage",
+        lambda _path: usage._replace(total=16 * 1024**3, used=8 * 1024**3, free=8 * 1024**3),
+    )
 
     async def inv(*a):
         return [

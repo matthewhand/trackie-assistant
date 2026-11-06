@@ -1,6 +1,6 @@
 {
   "name": "Trackie Assistant",
-  "version": "1.6.2-rc1",
+  "version": "1.6.2-rc2",
   "slug": "suno_dl",
   "description": "Sync public Suno profiles into your media library for Music Assistant",
   "url": "https://github.com/matthewhand/trackie-assistant",

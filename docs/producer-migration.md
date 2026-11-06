@@ -58,7 +58,11 @@ Journal v10 uses the restricted lossless-artist-v1 writer. Supported layouts
 are tail-moov audio MP4/M4A, plain ID3v2.4 (or restricted v2.3 with sufficient
 existing padding) MP3, and supported RIFF/WAV with a final ID3 chunk. Only the
 artist is patched; encoded audio, unrelated supported metadata bytes, title
-and other non-target fields are preserved. A decoder check additionally verifies
+and other non-target fields are preserved. MP4/M4A may contain one bounded
+JPEG or PNG native cover with a matching attached-image stream. Its exact bytes,
+image type and probed image metadata must remain unchanged. True video, extra
+audio streams, multiple covers, mismatched cover types, chapters and ID3 artwork
+remain unsupported. A decoder check additionally verifies
 the audio. Unsupported layouts fail closed before track moves.
 
 Linux inode/fsx flags, extended attributes, sparse allocation, ownership, mode,

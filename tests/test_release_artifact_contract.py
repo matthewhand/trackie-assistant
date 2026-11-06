@@ -35,7 +35,7 @@ def test_release_candidate_version_and_addon_identity() -> None:
 
     addon = json.loads((ROOT / "addon/suno_dl/config.json").read_text())
     assert addon["name"] == addon["panel_title"] == "Trackie Assistant"
-    assert addon["version"] == "1.6.2-rc1"
+    assert addon["version"] == __version__.replace("rc", "-rc")
     assert addon["arch"] == ["amd64"]
     repository = json.loads((ROOT / "repository.json").read_text())
     assert repository["url"] == addon["url"]
@@ -150,9 +150,11 @@ def test_vendored_wheel_matches_reviewed_release_bytes() -> None:
     """
     wheels = sorted(WHEEL_DIR.glob("*.whl"))
     assert len(wheels) == 1
-    assert hashlib.sha256(wheels[0].read_bytes()).hexdigest() == (
-        "e2ba4803f6635f16e718f522a07cd7724fadcfb7d1c4ba4e14c32d83e6467c25"
-    )
+    reviewed = {
+        "1.6.2rc1": "e2ba4803f6635f16e718f522a07cd7724fadcfb7d1c4ba4e14c32d83e6467c25",
+        "1.6.2rc2": "71c4802a1a54e7cc4304881277cd832c279170e26e4e6ad7d8674a37655bd8c8",
+    }
+    assert hashlib.sha256(wheels[0].read_bytes()).hexdigest() == reviewed[__version__]
 
 
 def test_wheel_metadata_has_no_replacement_characters() -> None:
@@ -163,4 +165,4 @@ def test_wheel_metadata_has_no_replacement_characters() -> None:
         body = _metadata_body(archive.read(metadata_name))
 
     assert "\ufffd" not in body
-    assert "\u2014" in body  # the README's em dashes survive the build
+    assert body.strip() == (ROOT / "README.md").read_text(encoding="utf-8").strip()

@@ -85,7 +85,7 @@ def base(tmp_path_factory):
 def browser():
     with sync_api.sync_playwright() as pw:
         try:
-            b = pw.chromium.launch()
+            b = pw.chromium.launch(executable_path=os.environ.get("SUNO_BROWSER_EXECUTABLE"))
         except Exception as exc:  # noqa: BLE001 - browser binary not installed
             if os.environ.get("SUNO_REQUIRE_BROWSER"):  # CI: never skip silently
                 pytest.fail(f"chromium required but unavailable: {exc}")

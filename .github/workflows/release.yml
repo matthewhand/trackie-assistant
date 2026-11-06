@@ -68,7 +68,7 @@ jobs:
           test "$TAG" = "$VER" || { echo "tag/version mismatch"; exit 1; }
       - name: Build reproducible artifacts and verify wheel provenance
         run: |
-          python -m pip install --upgrade pip build setuptools wheel
+          python -m pip install --upgrade pip build==1.6.1 setuptools==84.2.1 wheel==0.48.0
           umask 022
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct HEAD)"
           python -m build --no-isolation --wheel
@@ -99,6 +99,7 @@ jobs:
         with:
           files: dist/*
           body_path: dist/release-notes.md
+          draft: true # publish only after reviewed asset hashes have been checked
           generate_release_notes: false
           prerelease: ${{ contains(github.ref_name, 'rc') }}
           make_latest: false

@@ -17,9 +17,12 @@ IDS = [
 RUN = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 
-@pytest.mark.parametrize("unavailable", [False, True])
+@pytest.mark.parametrize(
+    ("unavailable", "scope"),
+    [(False, "normal"), (True, "normal"), (False, "resume"), (False, "drift")],
+)
 async def test_selected_job_deduplicates_preserves_existing_and_reports_truthfully(
-    tmp_path, monkeypatch, unavailable
+    tmp_path, monkeypatch, unavailable, scope
 ):
     script = Path(__file__).parents[1] / "deploy/ct107/sync_selected.py"
     spec = importlib.util.spec_from_file_location("selected_job", script)
@@ -97,7 +100,17 @@ async def test_selected_job_deduplicates_preserves_existing_and_reports_truthful
     audit_dir = tmp_path / "audit"
     audit_dir.mkdir()
     audit = audit_dir / "run.jsonl"
-    result = await module.run(root, audit, RUN, IDS[:2], tmp_path / "absent-blocklist")
+    options = {}
+    if scope != "normal":
+        options["expected_missing"] = frozenset(IDS[1:] if scope == "resume" else IDS[1:2])
+    if scope == "drift":
+        with pytest.raises(ValueError, match="approved resume set"):
+            await module.run(root, audit, RUN, IDS[:2], tmp_path / "absent-blocklist", **options)
+        assert calls == []
+        assert old.read_bytes() == b"original recording"
+        assert not list(root.glob("*.json"))
+        return
+    result = await module.run(root, audit, RUN, IDS[:2], tmp_path / "absent-blocklist", **options)
     assert result == int(unavailable)
     assert calls == IDS[1:]
     assert old.read_bytes() == b"original recording"

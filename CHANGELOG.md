@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.2rc2 — 2026-11-07
+
+- Limit explicitly approved playlist retries to the exact missing clip IDs; refuse changed scope before transfers.
+- Preserve one supported embedded JPEG/PNG cover during lossless M4A/MP4 artist correction, including interrupted-publication recovery.
+- Keep rejecting real video, additional audio, multiple covers, mismatched artwork and chapters.
+- Make offline acceptance portable across available disk space and existing Chrome installations.
+
+
 ## 1.6.2rc1 — 2026-11-06
 
 Linux preview of Trackie Assistant: verified producer attribution, additions-only
