@@ -1,6 +1,6 @@
 # Trackie Assistant
 
-Local Linux candidate: add-on **1.6.2-dev.1**, package **1.6.2.dev20261103+linux.1**.
+Linux preview: add-on **1.6.2-rc1**, package **1.6.2rc1**.
 
 > **Linux preview 1.6.2rc1:** Linux audio sync and previews verify producers from each clip's own canonical page and publish prepared file groups. Existing-file repairs require the reviewed offline migration. This release targets Python 3.13 on Linux; container and HAOS add-on validation covers AMD64. Indexed recordings are reused unchanged. See the release notes for discovery and repair limits.
 
@@ -28,8 +28,8 @@ library — where [Music Assistant](https://www.music-assistant.io)'s
    and `/song/id` URLs. Remove query strings and fragments before entering
    a URL; commas and whitespace are also unsupported.
 2. **Media** (Options): syncs default to **audio + cover images**. Leave
-   **download_videos** off (default) for Music Assistant — MP4 videos are
-   optional and usually unwanted on HA. **covers** stays on by default.
+   **download_videos** off (default) for Music Assistant — Retained MP4 videos are
+   outside the Linux preview scope. **covers** stays on by default.
    Optional **model_version** (e.g. `v6`) keeps only tracks made with
    that Suno model; leave it empty to sync everything.
 3. Enable the add-on and open its web panel (**Trackie Assistant** in the sidebar).
@@ -49,13 +49,13 @@ add-on before changing its archive path or storage mounts.
 ## How it works
 
 Downloads go directly to `/media/suno/<profile>/` on the HA box — no
-other machine involved, no LAN copies. Syncs run at startup and then on
-a schedule (default every 6 h); the web panel shows live progress and
-lets you trigger a sync or a taste-ranked "which profile next?" anytime.
+other machine involved, no LAN copies. Sync on start is off by default. Select sources and preview them in the
+web panel before starting a sync. Configure the interval in the add-on options
+if you want scheduled runs; the panel shows live progress.
 
 Already have tracks from the CLI on another machine? Copy them into
-`/media/suno/<profile>/` once — sync dedups by filename and only
-fetches what's missing.
+`/media/suno/<profile>/` once — sync reuses indexed recordings by clip ID. Existing files without ID
+sidecars need a separate inventory before their identities can be established.
 
 ## Free-space check
 
