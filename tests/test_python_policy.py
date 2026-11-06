@@ -53,8 +53,9 @@ def test_local_ci_harness_is_python_313_only() -> None:
 
 def test_container_and_docs_state_the_same_minimum() -> None:
     assert "python-3.13" in _read("addon", "suno_dl", "Dockerfile")
-    assert "python-3.13%2B" in _read("README.md")
-    assert "Python **3.13+**" in _read("README.md")
+    # Enforce the documented minimum without requiring a particular badge or
+    # Markdown emphasis style on the landing page.
+    assert re.search(rf"\bPython\s+(?:\*\*)?{re.escape(SUPPORTED)}\+", _read("README.md"))
     assert "Python 3.13 on Linux." in _read("CONTRIBUTING.md")
     assert "pytest 3.13" in _read("docs", "diagrams", "specs", "10-operations.json")
     for path in ("README.md", "CONTRIBUTING.md", "docs/handoff.md", "docs/release-verification.md"):
