@@ -1,0 +1,11 @@
+[Unit]
+Description=Run suno-download-cli local CI every 3 hours (1-week CI replacement)
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=3h
+Persistent=true
+Unit=suno-ci-local.service
+
+[Install]
+WantedBy=timers.target

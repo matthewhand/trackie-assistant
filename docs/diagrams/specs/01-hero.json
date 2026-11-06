@@ -1,0 +1,31 @@
+{
+  "slug": "hero",
+  "eyebrow": "Architecture · Overview",
+  "title": "suno-download-cli at a glance",
+  "desc": "A user runs the suno-dl command-line tool against a public Suno URL. Discovery finds tracks, the downloader resolves and fetches media, and audio files are written to a local directory.",
+  "viewbox": [1000, 460],
+  "width": 1120,
+  "zones": [
+    {"x": 24, "y": 72, "w": 608, "h": 300, "label": "LOCAL"},
+    {"x": 664, "y": 72, "w": 312, "h": 300, "label": "EXTERNAL"}
+  ],
+  "nodes": [
+    {"id": "user", "x": 40, "y": 156, "w": 104, "h": 48, "kind": "input", "name": "User", "sub": "shell"},
+    {"id": "cli", "x": 208, "y": 152, "w": 192, "h": 56, "kind": "focal", "name": "suno-dl", "sub": "cli.py · click"},
+    {"id": "disc", "x": 208, "y": 280, "w": 144, "h": 56, "kind": "module", "name": "Discovery", "sub": "discovery.py"},
+    {"id": "dl", "x": 376, "y": 280, "w": 208, "h": 56, "kind": "module", "name": "Downloader", "sub": "httpx · semaphore"},
+    {"id": "files", "x": 448, "y": 172, "w": 168, "h": 56, "kind": "store", "name": "Track files", "sub": "./downloads/*.m4a"},
+    {"id": "pages", "x": 688, "y": 140, "w": 264, "h": 56, "kind": "external", "name": "Suno pages", "sub": "suno.com"},
+    {"id": "cdn", "x": 688, "y": 288, "w": 264, "h": 56, "kind": "external", "name": "Media objects", "sub": "cdn1.suno.ai · cloudfront.net"}
+  ],
+  "edges": [
+    {"from": "user", "to": "cli", "port": "right", "kind": "local"},
+    {"from": "cli", "to": "disc", "port": "bottom", "label": "DISCOVER", "kind": "local"},
+    {"from": "cli", "to": "dl", "port": "bottom", "label": "DOWNLOAD", "kind": "local"},
+    {"from": "disc", "to": "dl", "port": "right", "kind": "local"},
+    {"from": "dl", "to": "files", "port": "top", "label": "WRITE", "kind": "accent"},
+    {"from": "dl", "to": "pages", "port": "right", "label": "HTML PAGE", "kind": "http"},
+    {"from": "dl", "to": "cdn", "port": "right", "label": "MEDIA URL", "kind": "http"}
+  ],
+  "legend": ["focal", "module", "external", "store", "http", "local"]
+}

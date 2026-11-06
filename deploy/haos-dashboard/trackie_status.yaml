@@ -1,0 +1,26 @@
+# Read-only status: reuses the existing CT107 music mount.
+command_line:
+  - sensor:
+      name: Trackie sync status
+      unique_id: trackie_ct107_sync_status
+      command: "python3 /config/trackie/read_sync_status.py"
+      scan_interval: 15
+      command_timeout: 10
+      value_template: "{{ value_json.phase }}"
+      json_attributes:
+        - run_id
+        - updated_at
+        - message
+        - selected_playlists
+        - total
+        - already_local
+        - missing
+        - downloaded
+        - failed
+        - remaining
+        - current_title
+        - next_transfer_at
+        - covers_added
+        - source_mode
+        - available
+        - capacity

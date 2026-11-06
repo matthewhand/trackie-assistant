@@ -1,0 +1,119 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction B — genre map (mockup, synthetic data)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+body { height: 100vh; overflow: hidden; }
+.app { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0,1fr); gap: 10px; padding: 12px; max-width: 1800px; margin: 0 auto; }
+header.top { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+header.top h1 { font-size: 1.1rem; margin: 0; }
+header.top .tools { margin-left: auto; display: flex; gap: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: transparent; min-height: 36px; padding: 0 14px; }
+.seg .on { background: var(--card2); color: var(--blue-t); font-weight: 600; }
+.hint { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: .85em; }
+.work { display: grid; gap: 12px; grid-template-columns: minmax(0,1fr) 340px; min-height: 0; }
+.map { position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; min-height: 0; }
+.tile { position: absolute; border-radius: 10px; padding: 10px 12px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid transparent; color: #fff; }
+.tile .nm { font-weight: 700; font-size: 1.02rem; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.tile .ct { font-size: .85rem; opacity: .95; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.tile.small .nm { font-size: .85rem; } .tile.small .ct { font-size: .75rem; }
+.tile .covers { display: flex; gap: 4px; }
+.tile .covers span { width: 28px; height: 28px; border-radius: 6px; background-size: cover; border: 1px solid rgba(255,255,255,.35); }
+.tile.sel { border-color: #fff; box-shadow: 0 0 0 3px var(--blue); }
+.tile.unc { background: repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 8px, transparent 8px 16px), hsl(215 18% 30%) !important; border: 2px dashed rgba(255,255,255,.55); }
+.tile.drag { z-index: 6; transform: translate(34px, 26px) rotate(-3deg) scale(1.03); box-shadow: var(--shadow); cursor: grabbing; }
+.tile.drop { border-color: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 55%, transparent); }
+.tile.bad { border-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 60%, transparent); }
+.badge-w { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6); border-radius: 12px; padding: 2px 8px; font-size: .75rem; display: flex; gap: 6px; align-items: center; }
+.ring { width: 54px; height: 54px; border-radius: 50%; background: conic-gradient(#fff 0 40%, rgba(255,255,255,.25) 40% 100%); display: grid; place-items: center; }
+.ring::after { content: "40%"; width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.65); display: grid; place-items: center; font-size: .72rem; }
+.tip { position: absolute; z-index: 8; background: var(--card); color: var(--text); border: 1px solid var(--ok); border-radius: 10px; padding: 8px 10px; box-shadow: var(--shadow); font-size: .85rem; max-width: 260px; }
+.drawer { border: 1.5px solid var(--blue); border-radius: 12px; background: var(--card); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow: auto; min-height: 0; }
+.drawer > * { flex: none; }
+.drawer h2 { margin: 0; font-size: 1.05rem; }
+.stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.stats b { display: block; font-size: 1.25rem; }
+.sec { text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; color: var(--muted); }
+.impact { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--card)); }
+.handle { display: none; }
+.minilist { display: flex; flex-direction: column; gap: 6px; }
+.minirow { display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 8px; background: var(--card2); }
+.minirow .cover { width: 34px; height: 34px; }
+@media (max-width: 1000px) { .work { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; } }
+@media (max-width: 760px) {
+  .app { padding: 8px; gap: 8px; } .hint .desk { display: none; }
+  .drawer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; border-radius: 18px 18px 0 0; border-bottom: 0; padding: 4px 14px 14px; max-height: 44vh; box-shadow: var(--shadow); }
+  .handle { display: block; width: 44px; height: 24px; margin: 0 auto; border: 0; background: transparent; position: relative; }
+  .handle::after { content: ""; position: absolute; left: 2px; right: 2px; top: 10px; height: 4px; border-radius: 2px; background: var(--muted); }
+  .work { padding-bottom: 0; } .map { margin-bottom: calc(44vh - 20px); }
+  .tile .covers { display: none; }
+  header.top .tools .btn:not(.keep) { display: none; }
+}
+</style></head><body>
+<div class="app" id="app"></div>
+<div class="mock-tag">Mockup · Direction B · synthetic tracks &amp; artwork</div>
+<script src="shared.js"></script>
+<script>
+const state = P.get("state") || "idle";           // idle | dragging | working | error
+const sel = P.get("sel") || (state === "dragging" ? "Lo-fi Study Beats" : "Neo Soul & House");
+const total = TRACKS.length;
+function squarify(items, x, y, w, h) {            // items sorted desc by value; returns [{item,x,y,w,h}]
+  const out = []; let rest = items.slice(); let sum = rest.reduce((a, b) => a + b.v, 0);
+  while (rest.length) {
+    const short = Math.min(w, h);
+    // simple, robust variant: add items while the worst aspect ratio improves
+    const ar = (r) => { const s = r.reduce((a, b) => a + b.v, 0); const side = (s / sum) * (w * h) / short; const mx = Math.max(...r.map((i) => i.v)), mn = Math.min(...r.map((i) => i.v)); const big = (mx / s) * short, small = (mn / s) * short; return Math.max(big / side, side / big, small / side, side / small); };
+    let cur = [];
+    while (rest.length) { const t = cur.concat(rest[0]); if (cur.length && ar(t) > ar(cur)) break; cur = t; rest.shift(); }
+    const s = cur.reduce((a, b) => a + b.v, 0); const side = (s / sum) * (w * h) / short; let off = 0;
+    for (const it of cur) { const len = (it.v / s) * short;
+      if (w >= h) out.push({ item: it, x: x, y: y + off, w: side, h: len }); else out.push({ item: it, x: x + off, y: y, w: len, h: side }); off += len; }
+    if (w >= h) { x += side; w -= side; } else { y += side; h -= side; }
+    sum -= s;
+  }
+  return out;
+}
+const g = GENRES.find((x) => x.name === sel);
+const shortName = (n) => n.length > 16 ? n.replace(" Study", "").replace("Cinematic ", "Cine. ") : n;
+const drawer = () => {
+  const covers = TRACKS.filter((t) => t.genre === sel).slice(0, 4).map((t) => `<div class="minirow"><div class="cover" style="background-image:${art(t.id, t.hue)}"></div><div><div style="font-weight:600">${esc(t.title)}</div><div class="muted" style="font-size:.8em">${esc(t.style)}</div></div></div>`).join("");
+  const banner = state === "working" ? `<div class="banner work" role="status"><div class="row"><span class="spin"></span><span>Splitting “${esc(sel)}”… analysing 12 of ${g.n} tracks</span></div><div class="bar" style="margin:8px 0"><i style="width:40%"></i></div><button class="btn">Cancel</button></div>`
+    : state === "error" ? `<div class="banner err" role="group"><b>AI service unreachable</b> · Splitting “${esc(sel)}”<div class="muted" style="font-size:.85em">12 of ${g.n} tracks analysed. Nothing was changed. Request c0b7ef80</div><div class="row" style="margin-top:8px"><button class="btn pri">Retry</button><button class="btn">Copy details</button><button class="btn">Dismiss</button></div></div>`
+    : state === "dragging" ? `<div class="impact"><b>Merge preview</b><span>Lo-fi Study Beats 18 + Cinematic Ambient 14 → <b>32 songs</b></span><span class="muted">Nothing saved until Apply · Undo kept</span></div><div class="row"><button class="btn pri">Apply merge</button><button class="btn">Cancel</button></div>` : "";
+  return `<aside class="drawer" aria-label="Genre details: ${esc(sel)}"><button class="handle" aria-label="Expand or collapse details"></button>
+   <h2>${esc(sel)}</h2><div class="muted" style="margin-top:-6px">${g.n} tracks · ${Math.round(g.n * 100 / total)}% of library</div>${banner}
+   <div class="stats"><div><span class="muted">Tracks</span><b>${g.n}</b></div><div><span class="muted">Pinned</span><b>0</b></div><div><span class="muted">Abstained</span><b>1</b></div></div>
+   <div class="row"><button class="btn pri">Split</button><button class="btn">Edit</button><button class="btn">Merge into…</button></div>
+   <div class="muted" style="font-size:.85em">No drag? Use <b>Merge into…</b> or select a tile and press <kbd>M</kbd>.</div>
+   <div class="sec">Sample tracks</div><div class="minilist">${covers}</div></aside>`;
+};
+document.getElementById("app").innerHTML = `
+<header class="top"><h1>Suno genre map</h1><span class="muted">${total} tracks · tile area = track count</span>
+ <div class="tools"><div class="seg" role="group" aria-label="View"><button class="on" aria-pressed="true">Map</button><button aria-pressed="false">List</button></div><button class="btn keep">Undo</button><button class="btn">Reclassify</button></div></header>
+<div class="hint"><span>⠿ Drag a tile onto another to <b style="color:var(--text)">merge</b>.</span><span class="desk">Drag a tile’s corner out to <b style="color:var(--text)">split</b> · <kbd>M</kbd> merge · <kbd>S</kbd> split · <kbd>Z</kbd> undo</span><span>Long-press to drag on touch.</span></div>
+<div class="work"><div class="map" id="map" role="application" aria-label="Genre map"></div>${drawer()}</div>`;
+function layout() {
+  const map = document.getElementById("map"), W = map.clientWidth, H = map.clientHeight; map.innerHTML = "";
+  const items = GENRES.slice().sort((a, b) => b.n - a.n).map((x) => ({ ...x, v: x.n }));
+  const gap = 6; const rects = squarify(items, gap, gap, W - gap * 2, H - gap * 2);
+  for (const r of rects) {
+    const x = r.item, el = document.createElement("div");
+    const small = r.w < 150 || r.h < 90;
+    el.className = "tile" + (small ? " small" : "") + (x.name === sel ? " sel" : "") + (x.name === "Uncategorised" ? " unc" : "") +
+      (state === "dragging" && x.name === "Lo-fi Study Beats" ? " drag" : "") + (state === "dragging" && x.name === "Cinematic Ambient" ? " drop" : "") + (state === "error" && x.name === sel ? " bad" : "");
+    el.tabIndex = 0; el.setAttribute("role", "button"); el.setAttribute("aria-label", `${x.name}, ${x.n} tracks`);
+    Object.assign(el.style, { left: r.x + "px", top: r.y + "px", width: r.w - gap + "px", height: r.h - gap + "px", background: `linear-gradient(145deg, hsl(${x.hue} 55% 30%), hsl(${x.hue} 62% 42%))` });
+    const kids = x.kids ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${x.kids.map((k) => `<span style="background:rgba(0,0,0,.35);border-radius:8px;padding:2px 8px;font-size:.75rem">${k[0]} ${k[1]}</span>`).join("")}</div>` : "";
+    const cov = TRACKS.filter((t) => t.genre === x.name).slice(0, 3).map((t) => `<span style="background-image:${art(t.id, t.hue)}"></span>`).join("");
+    el.innerHTML = `<div><div class="nm">${esc(small ? shortName(x.name) : x.name)}</div><div class="ct">${x.n} tracks</div></div>${kids}${!small && r.h > 120 ? `<div class="covers">${cov}</div>` : ""}` +
+      (state === "working" && x.name === sel ? `<div class="badge-w" style="top:auto;bottom:8px;background:none;padding:0"><div class="ring" aria-hidden="true"></div></div>` : "") +
+      (state === "error" && x.name === sel ? `<div class="badge-w" style="background:var(--bad)">⚠ split failed</div>` : "");
+    map.appendChild(el);
+    if (state === "dragging" && x.name === "Cinematic Ambient") {
+      const tip = document.createElement("div"); tip.className = "tip"; tip.style.left = Math.max(8, r.x + 12) + "px"; tip.style.top = r.y + Math.min(r.h - 80, 60) + "px";
+      tip.innerHTML = "Drop to merge → <b>32 songs</b><br><span class='muted'>You can rename it before Apply.</span>"; map.appendChild(tip);
+    }
+  }
+}
+layout(); addEventListener("resize", layout);
+</script></body></html>

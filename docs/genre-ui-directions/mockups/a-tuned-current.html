@@ -1,0 +1,118 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction A — current layout, tuned (mockup, synthetic data)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.app { max-width: 1760px; margin: 0 auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; min-height: 100vh; }
+header.top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+header.top h1 { font-size: 1.15rem; margin: 0; }
+header.top .admin { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.shell { display: grid; gap: 14px; align-items: start; grid-template-columns: minmax(0,1fr) 340px; }
+main { min-width: 0; }
+.rail { display: none; }
+.stick { position: sticky; top: 0; z-index: 5; background: var(--card); padding: 12px; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.search { flex: 1 1 220px; max-width: 320px; min-height: 36px; display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--muted); }
+.list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.song { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); align-items: center; }
+.song .t { font-weight: 600; color: var(--blue-t); white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.song .s { grid-column: 2 / 3; color: var(--muted); font-size: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song .a { grid-row: 1 / span 2; grid-column: 3; display: flex; gap: 6px; }
+.song .cover { grid-row: 1 / span 2; }
+.badge { font-size: .75em; padding: 1px 7px; border-radius: 6px; background: var(--card2); color: var(--muted); margin-left: 8px; }
+.pane { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1.5px solid var(--blue); border-radius: 12px; background: var(--card); }
+.pane h2 { margin: 0; font-size: 1.05rem; }
+.stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.stats b { display: block; font-size: 1.3rem; }
+.sec { text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; color: var(--muted); margin-bottom: 6px; }
+.handle { display: none; }
+.preview { display: none; }
+.prev-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.diff { display: grid; grid-template-columns: 1fr 24px 1fr; gap: 8px; align-items: start; }
+.diff ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.diff li { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: 7px; background: var(--card2); }
+.diff li.keep { outline: 1px dashed var(--warn); }
+.genre-item { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; }
+.genre-item.on { background: var(--card2); border-color: var(--blue); }
+.genre-item i { width: 10px; height: 10px; border-radius: 3px; }
+.mock-note { font-size: 12px; color: var(--muted); }
+
+/* laptop 1280x720: tighter header, pane right */
+@media (min-width: 761px) and (max-height: 760px) { .app { padding: 10px; gap: 8px; } .song { padding: 6px 10px; } .stats b { font-size: 1.1rem; } .pane { padding: 12px; gap: 8px; } }
+/* desktop: rail + list + (detail over preview) */
+@media (min-width: 1500px) {
+  .shell { grid-template-columns: 250px minmax(0,1fr) 420px; }
+  .rail { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  .chips.top { display: none; }
+  .right { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 14px; }
+  .right .pane { position: static; }
+  .preview { display: flex; }
+}
+.right { display: contents; }
+@media (min-width: 1500px) { .right { display: flex; } }
+/* mobile: sticky filter bar, chips scroll sideways, bottom sheet */
+@media (max-width: 760px) {
+  .app { padding: 8px; gap: 8px; }
+  .shell { grid-template-columns: minmax(0,1fr); }
+  .stick { margin: 0 -8px; border-radius: 0; border-left: 0; border-right: 0; top: 0; padding: 10px 8px 8px; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chip { min-height: 44px; }
+  .search { flex: 1 1 100%; max-width: none; min-height: 44px; }
+  .song { grid-template-columns: 44px minmax(0,1fr); }
+  .song .t { white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .song .a { grid-column: 2; grid-row: auto; justify-content: flex-end; }
+  .pane { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 20; border-radius: 18px 18px 0 0; border-bottom: 0; padding: 4px 14px 14px; box-shadow: var(--shadow); max-height: 70vh; overflow: hidden; }
+  .handle { display: block; width: 44px; height: 24px; margin: 0 auto; border: 0; background: transparent; position: relative; }
+  .handle::after { content: ""; position: absolute; left: 2px; right: 2px; top: 10px; height: 4px; border-radius: 2px; background: var(--muted); }
+  .pane .full-only { display: none; }
+  .app { padding-bottom: 210px; }
+  header.top .admin .btn:nth-child(n+3) { display: none; }
+}
+</style></head><body>
+<div class="app" id="app"></div>
+<div class="mock-tag">Mockup · Direction A · synthetic tracks &amp; artwork</div>
+<script src="shared.js"></script>
+<script>
+const state = P.get("state") || "idle";            // idle | working | preview | error
+const active = P.get("genre") || "Neo Soul & House";
+const g = GENRES.find((x) => x.name === active);
+const songs = TRACKS.filter((t) => t.genre === active);
+const total = TRACKS.length;
+const chip = (x) => `<button class="chip ${x.name === active ? "on" : ""}" aria-pressed="${x.name === active}">${esc(x.name)} <span class="n">${x.n}</span></button>`;
+const rows = songs.slice(0, 14).map((t) => `<div class="song"><div class="cover" style="background-image:${art(t.id, t.hue)}"></div>
+  <div class="t">${esc(t.title)}<span class="badge">${esc(t.kid || t.genre)}</span></div><div class="s">${esc(t.style)} · ${t.dur}</div>
+  <div class="a"><button class="btn">Copy ▾</button><button class="btn" aria-label="More">⋯</button></div></div>`).join("");
+const working = `<div class="banner work" role="status"><div class="row"><span class="spin"></span><span>Splitting “${esc(active)}” into Neo Soul + House… analysing 12 of ${g.n} tracks</span></div>
+  <div class="bar" style="margin:8px 0"><i style="width:40%"></i></div><button class="btn">Cancel</button></div>`;
+const error = `<div class="banner err" role="group"><b>AI service timeout</b> · Splitting “${esc(active)}”<div>The AI service took too long to answer.</div>
+  <div class="muted" style="font-size:.85em">12 of ${g.n} tracks analysed, ${g.n - 12} not analysed. Nothing was changed. Request 2860ea48</div>
+  <div class="row" style="margin-top:8px"><button class="btn pri">Retry</button><button class="btn">Copy details</button><button class="btn">Dismiss</button></div></div>`;
+const previewBody = `<div class="diff"><div><div class="sec">Before</div><ul><li>${esc(active)} <b>${g.n}</b></li></ul></div><div class="muted" style="padding-top:22px">→</div>
+  <div><div class="sec">After</div><ul><li>Neo Soul <b>10</b></li><li>House <b>10</b></li><li class="keep">stay in ${esc(active)} <b>10</b></li></ul></div></div>
+  <div class="muted" style="font-size:.85em">10 song(s) were not classified by the AI and will stay in ${esc(active)}. Nothing is saved until Apply.</div>
+  <div class="row"><button class="btn pri">Apply</button><button class="btn">Cancel</button></div>`;
+const paneState = state === "working" ? working : state === "error" ? error : "";
+const paneInline = state === "preview" ? `<div class="prev-card" id="inline-prev"><div class="sec">Split preview</div>${previewBody}</div>` : "";
+document.getElementById("app").innerHTML = `
+<header class="top"><h1>Suno archive</h1><span class="muted"><b style="color:var(--text)">${total}</b> classified · ${total} in archive · 9 unsorted</span>
+  <div class="admin"><button class="btn">Edit genres</button><button class="btn">Reclassify</button><button class="btn">Undo</button></div></header>
+<div class="shell">
+  <aside class="rail" aria-label="Genres"><div class="sec">Genres</div>${GENRES.map((x) => `<div class="genre-item ${x.name === active ? "on" : ""}"><i style="background:${gcolor(x.name)}"></i><span>${esc(x.name)}</span><span class="muted">${x.n}</span></div>`).join("")}</aside>
+  <main><div class="stick"><div class="chips top">${GENRES.map(chip).join("")}</div>
+    <div class="filters"><label class="search">🔍&nbsp; search title or style…</label><span class="chip on">Newest</span><span class="chip">A–Z</span><span class="chip">Pinned 0</span><span class="chip">Unsorted 9</span></div></div>
+    <div class="list">${rows}</div></main>
+  <div class="right"><aside class="pane" aria-label="Genre details: ${esc(active)}">
+    <button class="handle" aria-label="Expand or collapse details"></button>
+    <h2>${esc(active)}</h2><div class="muted" style="margin-top:-8px">leaf genre · updated today</div>
+    ${paneState}
+    <div class="stats"><div><span class="muted">Tracks</span><b>${g.n}</b></div><div><span class="muted">Pinned</span><b>0</b></div><div><span class="muted">% lib</span><b>${Math.round(g.n * 100 / total)}</b></div></div>
+    <div class="row"><button class="btn pri">Split</button><button class="btn">Edit</button><button class="btn">Clear</button></div>
+    <div class="full-only"><div class="sec">Classified by</div><div class="row"><span class="chip">system1 ${g.n - 4}</span><span class="chip">LLM 3</span><span class="chip">abstained 1</span></div></div>
+    <div class="full-only muted" style="font-size:.85em">Tip: <kbd>/</kbd> search · <kbd>Esc</kbd> close · <kbd>j</kbd><kbd>k</kbd> move</div>
+    ${state === "preview" ? '<div class="hide-wide">' + paneInline + "</div>" : ""}
+  </aside>
+  ${state === "preview" ? `<section class="prev-card preview" aria-label="Split preview"><div class="sec">Split preview</div>${previewBody}</section>` : `<section class="prev-card preview"><div class="sec">Split preview</div><div class="muted">Press <b>Split</b> to preview what the AI would change. Nothing is applied until you confirm.</div></section>`}
+  </div>
+</div>`;
+if (matchMedia("(min-width:1500px)").matches) document.querySelectorAll(".hide-wide").forEach((e) => e.remove());
+</script></body></html>

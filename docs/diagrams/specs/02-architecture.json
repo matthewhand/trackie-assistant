@@ -1,0 +1,37 @@
+{
+  "slug": "arch",
+  "eyebrow": "Architecture · Modules",
+  "title": "Module structure and dependency direction",
+  "desc": "The suno_dl modules grouped into three layers. The cli entry point drives discovery, parser, and downloader; the downloader uses the fetcher for HTTP and the shared primitives urls and naming for safety.",
+  "viewbox": [1000, 520],
+  "width": 1120,
+  "zones": [
+    {"x": 24, "y": 64, "w": 952, "h": 126, "label": "ENTRY"},
+    {"x": 24, "y": 214, "w": 952, "h": 112, "label": "ORCHESTRATION"},
+    {"x": 24, "y": 350, "w": 952, "h": 104, "label": "SHARED PRIMITIVES"}
+  ],
+  "nodes": [
+    {"id": "cli", "x": 120, "y": 88, "w": 176, "h": 56, "kind": "focal", "name": "cli", "sub": "click entry point"},
+    {"id": "config", "x": 336, "y": 88, "w": 176, "h": 56, "kind": "module", "name": "config", "sub": ".env + pydantic"},
+
+    {"id": "disc", "x": 120, "y": 242, "w": 168, "h": 56, "kind": "module", "name": "discovery", "sub": "Playwright scroll"},
+    {"id": "parser", "x": 328, "y": 242, "w": 168, "h": 56, "kind": "module", "name": "parser", "sub": "RSC payload"},
+    {"id": "downloader", "x": 536, "y": 242, "w": 168, "h": 56, "kind": "module", "name": "downloader", "sub": "concurrency"},
+    {"id": "fetcher", "x": 744, "y": 242, "w": 168, "h": 56, "kind": "module", "name": "fetcher", "sub": "httpx retries"},
+
+    {"id": "urls", "x": 168, "y": 380, "w": 168, "h": 56, "kind": "store", "name": "urls", "sub": "hosts · allow-list"},
+    {"id": "naming", "x": 376, "y": 380, "w": 168, "h": 56, "kind": "store", "name": "naming", "sub": "safe filenames"},
+    {"id": "errors", "x": 584, "y": 380, "w": 168, "h": 56, "kind": "store", "name": "errors · ratelimit · models", "sub": "support types"}
+  ],
+  "edges": [
+    {"from": "cli", "to": "config", "port": "right", "kind": "local"},
+    {"from": "cli", "to": "disc", "port": "bottom", "label": "DISCOVER", "kind": "local"},
+    {"from": "cli", "to": "downloader", "port": "bottom", "label": "DOWNLOAD", "kind": "local"},
+    {"from": "downloader", "to": "parser", "port": "left", "kind": "local"},
+    {"from": "downloader", "to": "fetcher", "port": "right", "kind": "local"},
+    {"from": "disc", "to": "urls", "port": "bottom", "kind": "local"},
+    {"from": "parser", "to": "urls", "port": "bottom", "kind": "local"},
+    {"from": "downloader", "to": "naming", "port": "bottom", "kind": "local"}
+  ],
+  "legend": ["focal", "module", "store", "local"]
+}

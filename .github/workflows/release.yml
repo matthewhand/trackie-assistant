@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {} # jobs grant their own; least-privilege by default
+
+jobs:
+  # Keep the lint/type/test bar for current release targets. Windows archive
+  # support is deferred roadmap work and must not gate the Linux release.
+  test:
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check src tests
+      - name: Format check
+        run: ruff format --check src tests
+      - name: Typecheck
+        run: mypy src
+      - name: Test
+        run: pytest -q --cov=suno_dl --cov-report=term-missing --cov-fail-under=70
+      - name: Refuse release with unavailable required capabilities
+        run: python scripts/release_readiness.py
+
+  build:
+    needs: test
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Verify tag matches version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VER="$(python -c "import re,pathlib; \
+            print(re.search(r'version = \"([^\"]+)\"', \
+            pathlib.Path('pyproject.toml').read_text()).group(1))")"
+          echo "tag=$TAG version=$VER"
+          test "$TAG" = "$VER" || { echo "tag/version mismatch"; exit 1; }
+      - name: Build reproducible artifacts and verify wheel provenance
+        run: |
+          python -m pip install --upgrade pip build setuptools wheel
+          umask 022
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct HEAD)"
+          python -m build --no-isolation --wheel
+          python -m build --no-isolation --sdist
+          python scripts/release_manifest.py --ref HEAD --verify-wheel dist/*.whl --out dist/release-manifest.json
+          cp "docs/releases/${GITHUB_REF_NAME}.md" dist/release-notes.md
+      - name: Check package metadata
+        run: |
+          pip install twine
+          twine check dist/*.whl dist/*.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  github-release:
+    needs: build
+    permissions:
+      contents: write # creates the GitHub release and uploads assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          body_path: dist/release-notes.md
+          generate_release_notes: false
+          prerelease: ${{ contains(github.ref_name, 'rc') }}
+          make_latest: false
+
+  # Disabled until the project is actually published to PyPI. Enable and add a
+  # trusted publisher on PyPI to ship wheels automatically.
+  # pypi:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   environment: pypi
+  #   steps:
+  #     - uses: actions/download-artifact@v8
+  #       with: {name: dist, path: dist/}
+  #     - uses: pypa/gh-action-pypi-publish@release/v1

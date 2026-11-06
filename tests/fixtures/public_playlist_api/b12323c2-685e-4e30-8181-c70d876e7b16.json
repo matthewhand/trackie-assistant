@@ -1,0 +1,171 @@
+{
+  "id": "b12323c2-685e-4e30-8181-c70d876e7b16",
+  "name": "Skank Theory",
+  "is_public": true,
+  "is_hidden": false,
+  "is_trashed": false,
+  "current_page": 1,
+  "num_total_results": 16,
+  "playlist_clips": [
+    {
+      "clip": {
+        "id": "82dc2dce-256e-45e3-8ac8-a5829ccb84ac",
+        "title": "Thousand-Year Storm (feat. Michel Serres and Ral)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "459bb560-0297-48b3-8632-257340136d5b",
+        "title": "Lord of Atlantis (feat. Benedict Anderson and Namor)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "0e62908f-89f9-4827-8bce-0e25d69128dc",
+        "title": "Thoughtcast (feat. Donna Haraway and Mendicant Core)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "639a6d6a-6d91-473b-99a7-2a39f1644706",
+        "title": "Knowledge Pool (feat. Emry, Lurker of the Loch & Vilém Flusser)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "0ee7248f-77ac-4ebb-a765-55914015b767",
+        "title": "Commune with Dinosaurs (feat. Wayta & Donna Haraway)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "f69c405d-2b61-4e87-944e-fb09c4d5b720",
+        "title": "Ragavan, Nimble Pilferer [nsfw] (feat. Dack Fayden and Pierre-Joseph Proudhon)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "940dc16a-e459-4fa7-abff-01eeafa8897c",
+        "title": "Opt (feat. Mikhail Bakunin and Bria)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "62865ace-5d0f-43e5-92cc-a724f2472d7e",
+        "title": "Harmless Offering (feat. Zedruu the Greathearted & Jacques Derrida)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "2b30504d-a892-4777-9881-8695748ee2cb",
+        "title": "Goblin Rabblemaster (feat. Carl von Clausewitz and Anim Pakal)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "228b4881-d7b6-4820-8183-9d6179af8e14",
+        "title": "Chance Encounter (feat. Krark, the Thumbless & Quentin Meillassoux)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "4444ff1f-0ce8-41ec-8eeb-f888cf7a08f4",
+        "title": "Echoing Truth (feat. Kitsa & Claude Shannon)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b2f17ed7-3158-4f27-be15-c5f0267eb1b7",
+        "title": "Fervor (feat. Josiah Royce and Samut)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "91738875-aea5-4503-b0e3-4e3b02f68ee3",
+        "title": "Chandra's Regulator [nsfw] (feat. Chandra & Max Stirner)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "137527c2-2d0b-4ccf-b96b-77e108a37050",
+        "title": "Green Sun's Zenith (feat. Freyalise, Llanowar's Fury and Arne Næss)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "2141f733-e4a2-475c-91fc-57ac9973d9c2",
+        "title": "Aminatou's Augury (feat. Aminatou & William S. Burroughs)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "9af04097-817b-4176-b4c6-bdb0956dab83",
+        "title": "Behind the Scenes (feat. Queen Marchesa & Erving Goffman)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    }
+  ]
+}

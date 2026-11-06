@@ -1,0 +1,14 @@
+{
+  "sample.m4a": {
+    "input_sha256": "c01bd3388ce1d30fbe931b9fdfade2f1557776a98e45f45b259085bd0fb9fef7",
+    "output_sha256": "25832a80b01a9dd1c9e20aefbe17cb02ad6ecdf1d41f3de8a035d97b925ee5c2"
+  },
+  "sample.mp3": {
+    "input_sha256": "dd3f40365b0368a6698b258f19e553fbcb4f29b3fd9615bd01250afba5324bab",
+    "output_sha256": "2f86f455384e8647669714eb4c1c0f5ab8fc555c954b82cc4e5f3493d00450cf"
+  },
+  "sample.wav": {
+    "input_sha256": "ff233b0fe6408058c3c4649ff0aced9a9f2516e3227c5b051566b8eebaef3c18",
+    "output_sha256": "7dbb7a244fe749d3ebed1caa2a4b60ec56b3f97da8fd6cdc566ece36b555e44d"
+  }
+}

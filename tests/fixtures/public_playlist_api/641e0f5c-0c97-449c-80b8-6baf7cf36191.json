@@ -1,0 +1,161 @@
+{
+  "id": "641e0f5c-0c97-449c-80b8-6baf7cf36191",
+  "name": "Crooked Pop",
+  "is_public": true,
+  "is_hidden": false,
+  "is_trashed": false,
+  "current_page": 1,
+  "num_total_results": 15,
+  "playlist_clips": [
+    {
+      "clip": {
+        "id": "7247d3bf-7527-43ac-b17f-bc29741fbd77",
+        "title": "Animation Module (feat. Saheeli Rai & Donna Haraway)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "7361c358-6d64-4b77-9ad2-8b7bdc0aa615",
+        "title": "Rite of Replication (feat. Sakashima & Gertrude Stein)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "644df942-4883-45b9-abb6-087f03c0c03e",
+        "title": "Lost in the Mist (feat. Fblthp & Laurence Sterne)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "85ada343-4893-45d9-a34a-0c6b90627020",
+        "title": "Metamorphic Alteration (feat. Oko & Raymond Queneau)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "f2533d4f-e528-4e46-8fec-11807071eeef",
+        "title": "Niv-Mizzet, the Firemind (feat. Niv-Mizzet & Charles Peirce & Gaston Bachelard)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "fe38ee43-8717-4a94-9aa8-191bab5412ed",
+        "title": "Jhoira, Weatherlight Captain (feat. Jhoira & Gilbert Simondon)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b400e580-7629-4e79-ba77-03deabf20acc",
+        "title": "Goblin Bombardment (feat. Squee & Albert Camus)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "797f4a92-db5a-4510-ad22-ddcbebf5c226",
+        "title": "Spine Sower Jubilee (feat. Henry David Thoreau and Bristly Bill, Spine Sower)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "2175e44a-dfee-484e-a6fb-e90ac80250bd",
+        "title": "Fable of the Mirror-Breaker (feat. Walter Benjamin and Kiki-Jiki)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "f12b8e68-ee7f-4a45-b442-7c3781555da4",
+        "title": "Experimental Frenzy (feat. Saheeli Rai & Paul Feyerabend)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "395edaea-f40c-40e0-812e-1ccb23aa9df8",
+        "title": "Swarm Intelligence (feat. Grist & Gilles Deleuze)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "38e9e9e0-5100-43b7-ae42-04eaa6612792",
+        "title": "Mayael's Aria (feat. Huatli & Maurice Merleau-Ponty)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "59ac210c-6e6c-4a99-af0e-ec43b1269f5f",
+        "title": "Nexus of Fate [nsfw] (feat. Fblthp & Douglas Hofstadter)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "7b26f4f2-0cd2-4b4e-a3cc-3402ae24e54f",
+        "title": "Knowledge Pool (feat. Tamiyo & Jorge Luis Borges)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "ff9af4cd-6a35-4697-a448-13fe1b1ae58d",
+        "title": "Alrund's Epiphany (feat. Blaise Pascal and Lier)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    }
+  ]
+}

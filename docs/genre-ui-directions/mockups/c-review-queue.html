@@ -1,0 +1,93 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction C — review queue (mockup, synthetic data)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.app { max-width: 1800px; margin: 0 auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 100vh; }
+header.top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+header.top h1 { font-size: 1.1rem; margin: 0; }
+header.top .tools { margin-left: auto; display: flex; gap: 8px; }
+.prog { display: flex; align-items: center; gap: 10px; }
+.prog .bar { flex: 1; max-width: 320px; }
+.cols { display: grid; gap: 12px; grid-template-columns: 300px minmax(0,1fr) 340px; align-items: start; }
+.panel { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.sec { text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; color: var(--muted); }
+.q { display: flex; flex-direction: column; gap: 6px; }
+.qi { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 6px; border-radius: 9px; border: 1px solid transparent; }
+.qi .cover { width: 38px; height: 38px; }
+.qi.on { border-color: var(--blue); background: var(--card2); }
+.qi.done { opacity: .75; }
+.qi .tt { font-weight: 600; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.pill { font-size: .75rem; border-radius: 10px; padding: 1px 8px; border: 1px solid var(--line); background: var(--card2); white-space: nowrap; }
+.pill.ok { color: var(--ok); border-color: var(--ok); } .pill.no { color: var(--bad); border-color: var(--bad); } .pill.lo { color: var(--warn); border-color: var(--warn); }
+.focus { display: grid; grid-template-columns: 200px minmax(0,1fr); gap: 16px; }
+.focus .big { width: 200px; height: 200px; border-radius: 14px; background-size: cover; }
+.focus h2 { margin: 0 0 4px; font-size: 1.25rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sug { display: flex; flex-direction: column; gap: 8px; }
+.opt { display: grid; grid-template-columns: 22px 1fr 150px 44px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); min-height: 44px; }
+.opt.sel { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+.opt .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); } .opt.sel .dot { border-color: var(--blue); background: var(--blue); }
+.acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.acts .btn { flex: 1 1 120px; font-weight: 600; }
+.acts .acc { background: var(--ok); color: #04210f; border-color: transparent; }
+[data-theme=light] .acts .acc { color: #fff; }
+.acts .acc kbd { background: rgba(255,255,255,.4); color: inherit; border-color: rgba(0,0,0,.3); }
+.delta { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 10px; align-items: center; font-variant-numeric: tabular-nums; }
+.delta .plus { color: var(--ok); } .delta .minus { color: var(--bad); }
+.toast { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); }
+.why { font-size: .85em; color: var(--muted); }
+.swipehint { display: none; }
+@media (max-width: 1250px) { .cols { grid-template-columns: 260px minmax(0,1fr); } .impact { grid-column: 1 / -1; } }
+@media (max-width: 760px) {
+  .app { padding: 8px; gap: 8px; }
+  .cols { grid-template-columns: minmax(0,1fr); }
+  .queue { display: none; }
+  .focus { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .focus .big { width: min(62vw, 230px); height: min(62vw, 230px); }
+  .opt { grid-template-columns: 22px 1fr 44px; } .opt .bar { display: none; }
+  .swipehint { display: flex; justify-content: space-between; color: var(--muted); font-size: .85em; }
+  header.top .tools .btn:not(.keep) { display: none; }
+  .impact.collapsed .full { display: none; }
+}
+@media (min-width: 761px) and (max-height: 760px) { .focus .big { width: 150px; height: 150px; } .focus { grid-template-columns: 150px minmax(0,1fr); } }
+</style></head><body>
+<div class="app" id="app"></div>
+<div class="mock-tag">Mockup · Direction C · synthetic tracks &amp; artwork</div>
+<script src="shared.js"></script>
+<script>
+const state = P.get("state") || "review";          // review | working | error
+const queue = TRACKS.filter((t) => t.genre === "Uncategorised").map((t, i) => {
+  const sugg = [["Lo-fi Study Beats", 0.62 - i * 0.02], ["Cinematic Ambient", 0.24], ["Folk Acoustic", 0.09]];
+  return { ...t, sugg, status: i < 3 ? (i === 1 ? "no" : "ok") : "todo" };
+});
+const cur = queue[3];
+const accepted = queue.filter((q) => q.status === "ok").length, rejected = queue.filter((q) => q.status === "no").length;
+const pill = (q) => q.status === "ok" ? `<span class="pill ok">✓ ${esc(q.sugg[0][0].split(" ")[0])}</span>` : q.status === "no" ? `<span class="pill no">✕ kept</span>` : `<span class="pill lo">${Math.round(q.sugg[0][1] * 100)}%</span>`;
+const qlist = queue.map((q) => `<div class="qi ${q.status !== "todo" ? "done" : ""} ${q === cur ? "on" : ""}"><div class="cover" style="background-image:${art(q.id, q.hue)}"></div><div style="min-width:0"><div class="tt">${esc(q.title)}</div><div class="why">${esc(q.sugg[0][0])}?</div></div>${pill(q)}</div>`).join("");
+const opts = cur.sugg.map((s, i) => `<div class="opt ${i === 0 ? "sel" : ""}" role="radio" aria-checked="${i === 0}"><span class="dot"></span><span>${esc(s[0])}</span><div class="bar"><i style="width:${Math.round(s[1] * 100)}%;background:${gcolor(s[0], 55)}"></i></div><b>${Math.round(s[1] * 100)}%</b></div>`).join("");
+const status = state === "working" ? `<div class="banner work" role="status"><div class="row"><span class="spin"></span><span>Saving ${accepted} accepted changes… 2 of ${accepted}</span></div><div class="bar" style="margin:8px 0"><i style="width:66%"></i></div><button class="btn">Cancel</button></div>`
+  : state === "error" ? `<div class="banner err" role="group"><b>File or permission problem</b> · Saving ${accepted} accepted changes<div class="muted" style="font-size:.85em">0 of ${accepted} saved — nothing was changed; your decisions are kept on this device. Request 9f31a0c2</div><div class="row" style="margin-top:8px"><button class="btn pri">Retry</button><button class="btn">Copy details</button><button class="btn">Dismiss</button></div></div>`
+  : `<div class="toast" role="status"><span>Accepted “${esc(queue[2].title)}” → ${esc(queue[2].sugg[0][0])}</span><button class="btn">Undo <kbd>U</kbd></button></div>`;
+const impact = `<section class="panel impact" aria-label="What would change"><div class="sec">What would change</div>
+  <div class="delta"><span>Lo-fi Study Beats</span><span class="muted">18 →</span><b class="plus">${18 + accepted}  (+${accepted})</b>
+   <span>Uncategorised</span><span class="muted">9 →</span><b class="minus">${9 - accepted}  (−${accepted})</b></div>
+  <div class="full"><div class="why">${rejected} rejected stay in Uncategorised and will not be suggested again. Low-confidence songs (under 40%) are never auto-accepted.</div>
+  <div class="bar" style="margin:8px 0"><i style="width:${Math.round((accepted + rejected) / queue.length * 100)}%"></i></div>
+  <div class="why">${accepted + rejected} of ${queue.length} reviewed · nothing is written until you commit</div></div>
+  <div class="row"><button class="btn pri">Commit ${accepted} change${accepted === 1 ? "" : "s"}</button><button class="btn">Discard</button></div></section>`;
+document.getElementById("app").innerHTML = `
+<header class="top"><h1>Review queue</h1><div class="prog"><span class="muted">${accepted + rejected} of ${queue.length} reviewed</span><div class="bar" role="progressbar" aria-label="Review progress" aria-valuenow="${accepted + rejected}" aria-valuemin="0" aria-valuemax="${queue.length}"><i style="width:${Math.round((accepted + rejected) / queue.length * 100)}%"></i></div></div>
+ <div class="tools"><button class="btn keep">Undo</button><button class="btn">Filter: &lt; 70% confidence ▾</button><button class="btn">Open genre browser</button></div></header>
+${state === "review" ? "" : status}
+<div class="cols">
+ <section class="panel queue" aria-label="Queue"><div class="sec">Needs review · ${queue.length}</div><div class="q">${qlist}</div></section>
+ <section class="panel" aria-label="Current song"><div class="focus"><div class="big" style="background-image:${art(cur.id, cur.hue)}"></div>
+   <div><div class="sec">Song ${accepted + rejected + 1} of ${queue.length}</div><h2>${esc(cur.title)}</h2><div class="muted">${esc(cur.style)} · ${cur.dur}</div>
+   <div class="why" style="margin:8px 0">Why it is here: the rules classifier abstained, and the AI’s top choice is only ${Math.round(cur.sugg[0][1] * 100)}% sure.</div></div></div>
+   <div class="sec">Suggested genre</div><div class="sug" role="radiogroup" aria-label="Suggested genre">${opts}</div>
+   <div class="swipehint"><span>← Reject</span><span>Accept →</span></div>
+   <div class="acts"><button class="btn bad">Reject <kbd>R</kbd></button><button class="btn">Skip <kbd>S</kbd></button><button class="btn acc">Accept <kbd>A</kbd></button></div>
+   ${state === "review" ? status : ""}
+ </section>
+ ${impact}
+</div>`;
+</script></body></html>

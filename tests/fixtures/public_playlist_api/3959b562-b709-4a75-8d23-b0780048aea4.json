@@ -1,0 +1,181 @@
+{
+  "id": "3959b562-b709-4a75-8d23-b0780048aea4",
+  "name": "Thinkers vs Walkers - Instrumentals",
+  "is_public": true,
+  "is_hidden": false,
+  "is_trashed": false,
+  "current_page": 1,
+  "num_total_results": 17,
+  "playlist_clips": [
+    {
+      "clip": {
+        "id": "2227bb37-e9f3-4c24-81c1-3eeabb1764ad",
+        "title": "Omniscience [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b1f3fe0b-8ac6-4266-b3ce-21277effb347",
+        "title": "Jadzi, Oracle of the Stream [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "9611280e-ec94-4c95-85ec-e2aec352aacc",
+        "title": "Nightveil Specter [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "e12b7310-76ac-4a95-97cd-57841307f6c1",
+        "title": "Nexus of Fate [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "45647d79-2d6b-4ff8-bb7f-c7a66f68ae43",
+        "title": "Paradox Engine [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1e10b1b6-d5b9-48c7-b432-c15224761b22",
+        "title": "Leap of Faith [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "e1b76eff-8a91-49c6-afb0-caba1df602b2",
+        "title": "Crux of Fate [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "a7cf5a94-a971-427c-b4c9-db5204f66a67",
+        "title": "Commune with Dinosaurs [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "c0c7e06a-d9d8-41d7-ac31-853ba20176e6",
+        "title": "Crash Through [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "c6265523-c91a-41bc-9b60-67195504400e",
+        "title": "Lord of the Pit [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "c32911fd-efa8-4f40-a122-1ce8f5e10c86",
+        "title": "Tezzeret the Seeker [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "063c640d-e860-453d-ba1f-1c6bffc65365",
+        "title": "Kaito, Bane of Nightmares [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1a8f1da5-9b87-48c5-bd94-6d496425fb93",
+        "title": "Doomsday [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "224203f9-ab6f-4493-8d7b-71818cf6a5bf",
+        "title": "Unexpected Results [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "087925a8-1572-4c53-8d11-6021e415f189",
+        "title": "Vindicate [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "34b4098a-6df6-43fc-aa75-994025706f86",
+        "title": "Chart a Course [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b56dc089-22a2-432d-a219-ea138b6d10e9",
+        "title": "Blasphemous Act [instrumental]",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    }
+  ]
+}

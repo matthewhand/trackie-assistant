@@ -1,0 +1,55 @@
+{
+  "name": "Trackie Assistant",
+  "version": "1.6.2-rc1",
+  "slug": "suno_dl",
+  "description": "Sync public Suno profiles into your media library for Music Assistant",
+  "url": "https://github.com/matthewhand/trackie-assistant",
+  "arch": [
+    "amd64"
+  ],
+  "startup": "services",
+  "init": false,
+  "hassio_api": true,
+  "homeassistant_api": false,
+  "host_network": false,
+  "map": [
+    "media:rw",
+    "share:rw"
+  ],
+  "ports": {
+    "8760/tcp": null
+  },
+  "webui": "http://[HOST]:[PORT:8760]",
+  "ingress": true,
+  "ingress_port": 8760,
+  "panel_title": "Trackie Assistant",
+  "panel_icon": "mdi:music-box-multiple",
+  "options": {
+    "profiles": [],
+    "sync_on_start": false,
+    "sync_interval_minutes": 360,
+    "download_videos": false,
+    "covers": true,
+    "max_tracks": 0,
+    "max_disk_mb": 0,
+    "rotate": false,
+    "min_free_mb": 2048
+  },
+  "schema": {
+    "profiles": [
+      "str"
+    ],
+    "sync_on_start": "bool",
+    "sync_interval_minutes": "int(15,1440)",
+    "audio_only": "bool?",
+    "model_version": "str?",
+    "jev_url": "str?",
+    "session_cookie": "str?",
+    "download_videos": "bool",
+    "covers": "bool",
+    "max_tracks": "int(0,100000)",
+    "max_disk_mb": "int(0,1000000)",
+    "rotate": "bool",
+    "min_free_mb": "int(0,)"
+  }
+}

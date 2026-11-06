@@ -1,0 +1,31 @@
+{
+  "slug": "deps",
+  "eyebrow": "Architecture · Dependency graph",
+  "title": "Module import graph",
+  "desc": "Import edges between the suno_dl modules. The cli depends on the most modules, discovery and parser share urls and models, and there are no cycles. The downloader reaching into parser is the one cross-layer edge.",
+  "viewbox": [1000, 460],
+  "width": 1120,
+  "nodes": [
+    {"id": "cli", "x": 72, "y": 100, "w": 168, "h": 56, "kind": "focal", "name": "cli", "sub": "entry point"},
+    {"id": "config", "x": 72, "y": 200, "w": 168, "h": 56, "kind": "module", "name": "config", "sub": ""},
+    {"id": "downloader", "x": 320, "y": 100, "w": 168, "h": 56, "kind": "module", "name": "downloader", "sub": ""},
+    {"id": "parser", "x": 320, "y": 200, "w": 168, "h": 56, "kind": "module", "name": "parser", "sub": ""},
+    {"id": "discovery", "x": 320, "y": 300, "w": 168, "h": 56, "kind": "module", "name": "discovery", "sub": ""},
+    {"id": "fetcher", "x": 568, "y": 100, "w": 168, "h": 56, "kind": "module", "name": "fetcher", "sub": ""},
+    {"id": "urls", "x": 568, "y": 240, "w": 168, "h": 56, "kind": "store", "name": "urls", "sub": ""},
+    {"id": "naming", "x": 568, "y": 340, "w": 168, "h": 56, "kind": "store", "name": "naming", "sub": ""},
+    {"id": "errors", "x": 816, "y": 200, "w": 152, "h": 56, "kind": "store", "name": "errors", "sub": ""}
+  ],
+  "edges": [
+    {"from": "cli", "to": "config", "port": "bottom", "kind": "local"},
+    {"from": "cli", "to": "downloader", "port": "right", "kind": "local"},
+    {"from": "cli", "to": "discovery", "port": "right", "kind": "local"},
+    {"from": "downloader", "to": "parser", "port": "bottom", "kind": "accent"},
+    {"from": "downloader", "to": "fetcher", "port": "right", "kind": "local"},
+    {"from": "downloader", "to": "naming", "port": "right", "kind": "local"},
+    {"from": "parser", "to": "urls", "port": "right", "kind": "local"},
+    {"from": "discovery", "to": "urls", "port": "right", "kind": "local"},
+    {"from": "fetcher", "to": "errors", "port": "right", "kind": "local"}
+  ],
+  "legend": ["focal", "module", "store", "local", "accent"]
+}

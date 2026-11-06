@@ -1,0 +1,22 @@
+{
+  "slug": "state",
+  "eyebrow": "Behaviour · State machine",
+  "title": "Per-track download outcomes",
+  "desc": "Each track starts a download attempt and ends in one of three terminal states: downloaded, skipped because an existing file was found, or failed after every candidate URL was rejected.",
+  "viewbox": [1000, 480],
+  "width": 1120,
+  "states": [
+    {"id": "start", "kind": "start", "x": 72, "y": 130, "w": 24, "h": 24},
+    {"id": "attempt", "x": 176, "y": 118, "w": 200, "h": 64, "kind": "focal", "name": "attempt", "sub": "candidate loop"},
+
+    {"id": "downloaded", "x": 500, "y": 48, "w": 208, "h": 64, "kind": "state", "name": "downloaded", "sub": "bytes >= 1 KiB"},
+    {"id": "skipped", "x": 500, "y": 176, "w": 208, "h": 64, "kind": "state", "name": "skipped_exists", "sub": "file already present"},
+    {"id": "failed", "x": 500, "y": 304, "w": 208, "h": 64, "kind": "state", "name": "failed", "sub": "no media available"}
+  ],
+  "transitions": [
+    {"from": "start", "to": "attempt", "label": "begin", "kind": "local"},
+    {"from": "attempt", "to": "downloaded", "label": "accept", "guard": "[200]", "kind": "accent"},
+    {"from": "attempt", "to": "skipped", "label": "exists", "guard": "[file present]", "kind": "local"},
+    {"from": "attempt", "to": "failed", "label": "exhaust", "guard": "[403/404]", "kind": "async"}
+  ]
+}

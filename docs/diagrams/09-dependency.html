@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module import graph</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5; --color-ink: #2d3142; --color-muted: #4f5d75;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 3rem 2rem; }
+    .frame { max-width: 1120px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500;
+                letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted);
+                margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+          font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Dependency graph</p>
+    <h1>Module import graph</h1>
+    <svg viewBox="0 0 1000 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="deps-title deps-desc">
+      <title id="deps-title">Module import graph</title>
+      <desc id="deps-desc">Import edges between the suno_dl modules. The cli depends on the most modules, discovery and parser share urls and models, and there are no cycles. The downloader reaching into parser is the one cross-layer edge.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+      <path d="M 156,156 V 168 Q 156,176 164,176 H 148 Q 156,176 156,184 V 200" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,122 H 288 Q 296,122 296,114 V 92 Q 296,100 304,100 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 240,133 H 272 Q 280,133 280,125 V 292 Q 280,300 288,300 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 404,156 V 168 Q 404,176 412,176 H 396 Q 404,176 404,184 V 200" fill="none" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+      <path d="M 488,122 H 536 Q 544,122 544,114 V 92 Q 544,100 552,100 H 568" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 488,133 H 520 Q 528,133 528,125 V 332 Q 528,340 536,340 H 568" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 488,228 H 536 Q 544,228 544,220 V 232 Q 544,240 552,240 H 568" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 488,328 H 536 Q 544,328 544,336 V 304 Q 544,296 552,296 H 568" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 736,128 H 784 Q 792,128 792,120 V 192 Q 792,200 800,200 H 816" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="72" y="100" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="72" y="100" width="168" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="156" y="125" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">cli</text>
+      <text x="156" y="141" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">entry point</text>
+      <rect x="72" y="200" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="72" y="200" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="156" y="231" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">config</text>
+      <rect x="320" y="100" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="100" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="404" y="131" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">downloader</text>
+      <rect x="320" y="200" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="200" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="404" y="231" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">parser</text>
+      <rect x="320" y="300" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="300" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="404" y="331" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">discovery</text>
+      <rect x="568" y="100" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="568" y="100" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="652" y="131" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">fetcher</text>
+      <rect x="568" y="240" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="568" y="240" width="168" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="652" y="271" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">urls</text>
+      <rect x="568" y="340" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="568" y="340" width="168" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="652" y="371" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">naming</text>
+      <rect x="816" y="200" width="152" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="816" y="200" width="152" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="892" y="231" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">errors</text>
+      <line x1="32" y1="424" x2="968" y2="424" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="32" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+      <rect x="128" y="432" width="10" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="144" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">FOCAL</text>
+      <rect x="206" y="432" width="10" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="222" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">MODULE</text>
+      <rect x="290" y="432" width="10" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="306" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">STORE</text>
+      <line x1="368" y1="437" x2="392" y2="437" stroke="#4f5d75" stroke-width="1.2"/>
+      <text x="400" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">LOCAL CALL</text>
+      <line x1="492" y1="437" x2="516" y2="437" stroke="#eb6c36" stroke-width="1.2"/>
+      <text x="524" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">PRIMARY</text>
+    </svg>
+  </div>
+</body>
+</html>

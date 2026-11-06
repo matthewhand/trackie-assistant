@@ -1,0 +1,35 @@
+{
+  "slug": "security",
+  "eyebrow": "Security · Trust boundaries",
+  "title": "Untrusted page content and the three defences",
+  "desc": "Page content from Suno is untrusted. Before anything is fetched, media URLs pass the host allow-list; before anything is written, filenames pass sanitisation and contain in the output directory; and signed URL credentials are redacted from logs.",
+  "viewbox": [1000, 500],
+  "width": 1120,
+  "zones": [
+    {"x": 24, "y": 64, "w": 300, "h": 340, "label": "UNTRUSTED"},
+    {"x": 356, "y": 64, "w": 300, "h": 340, "label": "ENFORCEMENT"},
+    {"x": 688, "y": 64, "w": 288, "h": 340, "label": "TRUSTED / LOCAL"}
+  ],
+  "nodes": [
+    {"id": "payload", "x": 56, "y": 120, "w": 236, "h": 56, "kind": "external", "name": "Suno RSC payload", "sub": "media_urls · video_url"},
+    {"id": "titles", "x": 56, "y": 216, "w": 236, "h": 56, "kind": "external", "name": "Track titles", "sub": "arbitrary strings"},
+    {"id": "signed", "x": 56, "y": 312, "w": 236, "h": 56, "kind": "external", "name": "Signed URLs", "sub": "?sig= credentials"},
+
+    {"id": "allowlist", "x": 388, "y": 120, "w": 236, "h": 56, "kind": "focal", "name": "is_allowed_media_url", "sub": "https + host allow-list"},
+    {"id": "naming", "x": 388, "y": 216, "w": 236, "h": 56, "kind": "focal", "name": "sanitize_component", "sub": "traversal · reserved"},
+    {"id": "redact", "x": 388, "y": 312, "w": 236, "h": 56, "kind": "focal", "name": "redact_url", "sub": "strip query string"},
+
+    {"id": "fetch", "x": 720, "y": 120, "w": 224, "h": 56, "kind": "store", "name": "HTTP fetch", "sub": "cdn1 · cloudfront only"},
+    {"id": "write", "x": 720, "y": 216, "w": 224, "h": 56, "kind": "store", "name": "File write", "sub": "output_dir + containment"},
+    {"id": "logs", "x": 720, "y": 312, "w": 224, "h": 56, "kind": "store", "name": "Debug logs", "sub": "credentials removed"}
+  ],
+  "edges": [
+    {"from": "payload", "to": "allowlist", "port": "right", "kind": "local"},
+    {"from": "titles", "to": "naming", "port": "right", "kind": "local"},
+    {"from": "signed", "to": "redact", "port": "right", "kind": "local"},
+    {"from": "allowlist", "to": "fetch", "port": "right", "kind": "accent"},
+    {"from": "naming", "to": "write", "port": "right", "kind": "accent"},
+    {"from": "redact", "to": "logs", "port": "right", "kind": "accent"}
+  ],
+  "legend": ["external", "focal", "store", "accent"]
+}

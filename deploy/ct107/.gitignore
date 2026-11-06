@@ -1,0 +1,7 @@
+# One wheel goes here — copy it in from a build of a pinned commit.
+# The Dockerfile refuses zero or multiple wheels, and refuses a wheel whose
+# version differs from CLI_VERSION.
+*.whl
+
+# Operator secrets (gateway credentials) never belong in the repository.
+.env

@@ -1,0 +1,32 @@
+{
+  "slug": "seq-happy",
+  "eyebrow": "Sequence · Happy path",
+  "title": "Downloading a track, end to end",
+  "desc": "A user runs suno-dl against a profile URL. The cli validates the URL and loads config, discovery collects track links in a headless browser, the downloader resolves each track's real media URL from its song page, streams the media, and writes the file to disk.",
+  "viewbox": [1000, 560],
+  "width": 1120,
+  "actors": [
+    {"id": "user", "name": "User", "sub": "shell"},
+    {"id": "cli", "name": "cli", "sub": "click"},
+    {"id": "disc", "name": "discovery", "sub": "Playwright"},
+    {"id": "dl", "name": "downloader", "sub": "httpx"},
+    {"id": "cdn", "name": "CDN", "sub": "cdn1 · cloudfront"}
+  ],
+  "messages": [
+    {"n": 1, "from": "user", "to": "cli", "y": 148, "text": "suno-dl --url suno.com/@h", "kind": "call"},
+    {"n": 2, "from": "cli", "to": "disc", "y": 188, "text": "discover profile", "kind": "call"},
+    {"n": 3, "from": "disc", "to": "cli", "y": 228, "text": "list[TrackInfo]", "kind": "return"},
+    {"n": 4, "from": "cli", "to": "dl", "y": 268, "text": "download_tracks()", "kind": "call"},
+    {"n": 5, "from": "dl", "to": "dl", "y": 308, "text": "resolve media", "kind": "async"},
+    {"n": 6, "from": "dl", "to": "cdn", "y": 356, "text": "GET <id>.m4a", "kind": "call-link"},
+    {"n": 7, "from": "cdn", "to": "dl", "y": 396, "text": "200 OK (bytes)", "kind": "return"},
+    {"n": 8, "from": "dl", "to": "cli", "y": 444, "text": "written to disk", "kind": "return"},
+    {"n": 9, "from": "cli", "to": "user", "y": 484, "text": "exit 0 · summary", "kind": "headline"}
+  ],
+  "activations": [
+    {"who": "cli", "y": 152, "h": 336},
+    {"who": "disc", "y": 192, "h": 32},
+    {"who": "dl", "y": 272, "h": 168},
+    {"who": "cdn", "y": 360, "h": 32}
+  ]
+}

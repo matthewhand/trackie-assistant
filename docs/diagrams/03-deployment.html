@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deployment model and CI topology</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5; --color-ink: #2d3142; --color-muted: #4f5d75;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 3rem 2rem; }
+    .frame { max-width: 1120px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500;
+                letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted);
+                margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+          font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Deployment · Where it runs</p>
+    <h1>Deployment model and CI topology</h1>
+    <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="deploy-title deploy-desc">
+      <title id="deploy-title">Deployment model and CI topology</title>
+      <desc id="deploy-desc">The CLI is a pip-installed console script that runs as a single user process on a workstation. There is no server component, database, or container. CI is reproduced locally by a systemd user timer because GitHub Actions is unavailable on this account.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+      <rect x="24" y="64" width="560" height="356" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="40" y="68" width="93" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="86" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">WORKSTATION</text>
+      <rect x="608" y="64" width="368" height="356" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="624" y="68" width="135" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="691" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">REMOTE / EXTERNAL</text>
+      <path d="M 256,144 H 280 Q 288,144 288,136 V 108 Q 288,116 296,116 H 312" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 312,144 H 288 Q 280,144 280,136 V 208 Q 280,216 272,216 H 256" fill="none" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+      <path d="M 552,138 H 616 Q 624,138 624,130 V 108 Q 624,116 632,116 H 648" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <path d="M 552,149 H 600 Q 608,149 608,141 V 208 Q 608,216 616,216 H 648" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <path d="M 312,244 H 288 Q 280,244 280,236 V 308 Q 280,316 272,316 H 256" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <path d="M 432,272 V 284 Q 432,292 440,292 H 424 Q 432,292 432,300 V 316" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <path d="M 256,344 H 616 Q 624,344 624,336 V 308 Q 624,316 632,316 H 648" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="296" y="120" width="44" height="12" rx="2" fill="#f5f5f5"/><text x="318" y="129" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EXEC</text>
+      <rect x="288" y="170" width="44" height="12" rx="2" fill="#f5f5f5"/><text x="310" y="179" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE</text>
+      <rect x="56" y="116" width="200" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="116" width="200" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="156" y="141" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">venv</text>
+      <text x="156" y="157" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">.venv/bin/suno-dl</text>
+      <rect x="312" y="116" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="312" y="116" width="240" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="432" y="141" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">suno-dl process</text>
+      <text x="432" y="157" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">console_scripts entry</text>
+      <rect x="56" y="216" width="200" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="216" width="200" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="156" y="241" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Output dir</text>
+      <text x="156" y="257" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">./downloads</text>
+      <rect x="312" y="216" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="312" y="216" width="240" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="432" y="241" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CI harness timer</text>
+      <text x="432" y="257" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">systemd · every 3h</text>
+      <rect x="56" y="316" width="200" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="316" width="200" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="156" y="341" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Git repo</text>
+      <text x="156" y="357" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">local checkout</text>
+      <rect x="312" y="316" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="312" y="316" width="240" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="432" y="341" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CI logs</text>
+      <text x="432" y="357" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">state/suno-ci-local</text>
+      <rect x="648" y="116" width="288" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="648" y="116" width="288" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="792" y="141" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">suno.com</text>
+      <text x="792" y="157" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HTML pages · port 443</text>
+      <rect x="648" y="216" width="288" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="648" y="216" width="288" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="792" y="241" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">cdn1 · cloudfront</text>
+      <text x="792" y="257" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">media objects · 443</text>
+      <rect x="648" y="316" width="288" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="648" y="316" width="288" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="792" y="341" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">GitHub</text>
+      <text x="792" y="357" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">git push · Actions (quota)</text>
+      <line x1="32" y1="464" x2="968" y2="464" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="32" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+      <rect x="128" y="472" width="10" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="144" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">FOCAL</text>
+      <rect x="206" y="472" width="10" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="222" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">STORE</text>
+      <rect x="284" y="472" width="10" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="300" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">EXTERNAL</text>
+      <line x1="380" y1="477" x2="404" y2="477" stroke="#2e5aa8" stroke-width="1.2"/>
+      <text x="412" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">HTTP</text>
+      <line x1="468" y1="477" x2="492" y2="477" stroke="#eb6c36" stroke-width="1.2"/>
+      <text x="500" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">PRIMARY</text>
+      <rect x="574" y="472" width="10" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="590" y="480" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">ASYNC</text>
+    </svg>
+  </div>
+</body>
+</html>

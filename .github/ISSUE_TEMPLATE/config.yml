@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/matthewhand/trackie-assistant/security/advisories/new
+    about: Please report vulnerabilities privately via a security advisory, not a public issue.
+  - name: Question / support
+    url: https://github.com/matthewhand/trackie-assistant/discussions
+    about: Ask usage questions in Discussions.

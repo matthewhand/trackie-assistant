@@ -1,0 +1,6 @@
+# Keep packaged source byte-identical to the vendored wheel on Windows.
+# Git auto-detects binary assets; only text receives LF checkout endings.
+src/suno_dl/** text=auto eol=lf
+
+# Match the packaged catalogue byte-for-byte on every checkout.
+tests/fixtures/genres.json text eol=lf

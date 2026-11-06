@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 200" role="img" aria-labelledby="trackie-title trackie-desc">
+<title id="trackie-title">Trackie Dacks</title><desc id="trackie-desc">Cheeky teal track pants mascot in headphones with gold music wave stripes and a thumbs-up.</desc>
+<style>
+.outline{stroke:#102c31;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.head{fill:#124a4a}.shade{fill:#0d393d}.light{fill:#24716c}.gold{fill:#f4ac39}.cream{fill:#fff4df}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes thumbs{0%,100%{transform:rotate(0deg)}50%{transform:rotate(9deg)}}
+@keyframes pulse{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
+#trackie-body{transform-origin:78px 100px;animation:sway 3.8s ease-in-out infinite}
+#right-arm{transform-origin:117px 85px;animation:thumbs 3.8s ease-in-out infinite}
+#eye-left,#eye-right{transform-box:fill-box;transform-origin:center;animation:blink 6s ease-in-out infinite}
+.wave{animation:pulse 1.5s ease-in-out infinite}
+.wave + .wave{animation-delay:.4s}
+@media(prefers-reduced-motion:reduce){#trackie-body,#right-arm,#eye-left,#eye-right,.wave{animation:none!important}}
+</style>
+<circle cx="81" cy="89" r="67" fill="#f8ca70" opacity=".8"/>
+<g id="trackie-body">
+<path d="M39 80Q14 86 16 114L27 122Q39 116 47 99" class="head outline"/>
+<path d="M14 107Q9 100 5 109L9 121Q18 130 27 121L28 109Z" class="cream outline"/>
+<g id="right-arm"><path d="M116 80Q140 77 141 58L155 64Q153 94 127 105Z" class="head outline"/>
+<path d="M139 67Q135 60 137 54L142 38Q145 33 150 39Q151 44 149 51L156 57Q161 65 154 71L152 79Q144 87 135 78Z" class="cream outline"/>
+<path d="M145 57L152 60M144 65L152 67" fill="none" stroke="#a88b63" stroke-width="2" stroke-linecap="round"/></g>
+<path id="left-leg" d="M36 100L78 109L76 142Q68 163 67 177L39 175Q30 145 36 100Z" class="head outline"/>
+<path d="M46 122Q40 150 50 171L57 172Q52 148 57 126Z" class="shade"/>
+<path id="right-leg" d="M74 111L118 102Q125 130 118 155L115 178L87 176L83 145Z" class="head outline"/>
+<path d="M93 126Q103 147 96 171L106 173Q111 146 105 122Z" class="light" opacity=".65"/>
+<path d="M39 170L69 170L68 179L38 179Z" class="shade outline"/>
+<path d="M86 170L116 170L115 180L86 179Z" class="shade outline"/>
+<path d="M38 178L64 177Q70 187 77 188Q80 198 70 198L28 198Q24 188 38 178Z" class="cream outline"/>
+<path d="M86 178L115 176Q118 185 131 187Q142 198 128 198L84 198Q78 188 86 178Z" class="cream outline"/>
+<path d="M34 192L73 192M86 193L132 193" fill="none" stroke="#d99c53" stroke-width="3"/>
+<path d="M43 182L58 184M43 187L61 189M94 183L108 183M94 188L112 189" fill="none" stroke="#124a4a" stroke-width="2" stroke-linecap="round"/>
+<path class="wave" d="M39 113L40 126L36 133L44 139L38 147L46 154L42 165" fill="none" stroke="#f4ac39" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="wave" d="M116 114L109 128L119 135L111 143L117 151L110 165" fill="none" stroke="#f4ac39" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="30" y="43" width="99" height="78" rx="22" class="head outline"/>
+<path d="M38 86Q35 111 53 117L56 96M116 77Q127 99 109 114" class="light" opacity=".45"/>
+<rect x="28" y="41" width="103" height="18" rx="7" class="shade outline"/>
+<path d="M38 45V56M49 45V56M60 45V56M71 45V56M82 45V56M93 45V56M104 45V56M116 45V56" fill="none" stroke="#398079" stroke-width="2"/>
+<path d="M26 73Q9 26 59 18Q95 5 132 44L138 70" fill="none" stroke="#102c31" stroke-width="12" stroke-linecap="round"/>
+<path d="M24 68Q11 28 58 20Q95 10 131 48" fill="none" stroke="#327d79" stroke-width="5" stroke-linecap="round"/>
+<rect x="17" y="60" width="24" height="36" rx="11" class="shade outline"/>
+<rect x="119" y="63" width="23" height="33" rx="10" class="shade outline"/>
+<rect x="21" y="65" width="16" height="26" rx="8" fill="#f4ac39"/>
+<path d="M25 79L28 72L31 84L34 76" fill="none" stroke="#0d5c63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M48 76Q59 67 68 75M88 75Q102 66 112 75" fill="none" stroke="#091f25" stroke-width="5" stroke-linecap="round"/>
+<g id="eye-left"><ellipse cx="60" cy="87" rx="12" ry="14" class="cream"/><ellipse cx="65" cy="89" rx="6" ry="8" fill="#322d26"/><circle cx="67" cy="86" r="2.5" fill="white"/></g>
+<g id="eye-right"><ellipse cx="102" cy="87" rx="12" ry="14" class="cream"/><ellipse cx="98" cy="89" rx="6" ry="8" fill="#322d26"/><circle cx="100" cy="86" r="2.5" fill="white"/></g>
+<path d="M68 106Q84 121 99 103Q85 114 68 106Z" class="cream outline"/>
+<path d="M79 50Q72 62 82 66L83 78M91 50Q101 64 93 70L92 80" fill="none" stroke="#fff1d4" stroke-width="3.3" stroke-linecap="round"/>
+<ellipse cx="83" cy="79" rx="4.8" ry="3.3" fill="#fff1d4" transform="rotate(-20 83 79)"/>
+<ellipse cx="92" cy="81" rx="4.8" ry="3.3" fill="#fff1d4" transform="rotate(-20 92 81)"/>
+</g>
+</svg>

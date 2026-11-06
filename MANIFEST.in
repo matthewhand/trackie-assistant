@@ -1,0 +1,4 @@
+include SECURITY.md
+include docs/trackie-assistant-banner.png
+include docs/trackie-assistant-logo.webp
+recursive-include docs/releases *.md

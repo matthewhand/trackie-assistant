@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>genre card harness (#95)</title>
+<style>body{background:#0b0b0b;color:#ddd;font:14px system-ui,sans-serif;margin:0;padding:12px}
+suno-genre-card{display:block;--header-height:0px;--card-background-color:#141414}</style>
+<script type="module" src="/static/suno-genre-card.js?v=9"></script>
+</head><body>
+<script>
+// ?theme=light mimics a light Home Assistant theme (the card must stay readable).
+if (new URLSearchParams(location.search).get("theme") === "light") {
+  const s = document.documentElement.style;
+  s.setProperty("--card-background-color", "#ffffff");
+  s.setProperty("--primary-text-color", "#212121");
+  s.setProperty("--secondary-text-color", "#727272");
+  s.setProperty("--primary-background-color", "#fafafa");
+  s.setProperty("--divider-color", "#e0e0e0");
+  s.setProperty("--error-color", "#db4437");
+  document.documentElement.style.colorScheme = "light";
+  document.addEventListener("DOMContentLoaded", () => { document.body.style.background = "#fafafa"; document.body.style.color = "#212121"; });
+}
+</script>
+<suno-genre-card id="lib"></suno-genre-card>
+<script type="module">
+// Test harness: a fake Home Assistant whose conversation agent is driven by the test.
+// Each agent call parks in window.__pending until the test resolves or rejects it.
+await customElements.whenDefined("suno-genre-card");
+window.__pending = [];
+window.__copied = null;
+window.__saves = [];
+const card = document.getElementById("lib");
+const params = new URLSearchParams(location.search);
+card.setConfig({
+  title: "Suno archive",
+  library_url: "/api/library",
+  tracks_url: "/api/tracks",
+  lyrics_url: "/api/lyrics",
+  client_error_url: "/api/client-error",
+  agent_timeout_s: Number(params.get("timeout") || 30),
+});
+card.hass = {
+  connection: {
+    sendMessagePromise: (msg) =>
+      new Promise((res, rej) => window.__pending.push({ msg, res, rej })),
+  },
+  callService: async (domain, service, data) => { window.__saves.push({ domain, service, data }); },
+};
+Object.defineProperty(navigator, "clipboard", {
+  value: { writeText: async (t) => { window.__copied = t; } },
+  configurable: true,
+});
+window.__ready = true;
+</script></body></html>

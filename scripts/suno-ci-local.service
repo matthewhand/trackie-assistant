@@ -1,0 +1,13 @@
+[Unit]
+Description=Local CI for suno-download-cli (reproduces .github/workflows/ci.yml)
+Documentation=file://%h/dev/suno-download-cli/scripts/ci-local.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/dev/suno-download-cli
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=CI_WORKDIR=%h/.local/state/suno-ci-local/work
+Environment=CI_LOGDIR=%h/.local/state/suno-ci-local/logs
+Environment="CI_PYTHONS=3.13"
+ExecStart=/usr/bin/env bash %h/dev/suno-download-cli/scripts/ci-local.sh hardening/security-and-safety
+TimeoutStartSec=1800

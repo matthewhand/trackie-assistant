@@ -1,0 +1,34 @@
+{
+  "slug": "deploy",
+  "eyebrow": "Deployment · Where it runs",
+  "title": "Deployment model and CI topology",
+  "desc": "The CLI is a pip-installed console script that runs as a single user process on a workstation. There is no server component, database, or container. CI is reproduced locally by a systemd user timer because GitHub Actions is unavailable on this account.",
+  "viewbox": [1000, 500],
+  "width": 1120,
+  "zones": [
+    {"x": 24, "y": 64, "w": 560, "h": 356, "label": "WORKSTATION"},
+    {"x": 608, "y": 64, "w": 368, "h": 356, "label": "REMOTE / EXTERNAL"}
+  ],
+  "nodes": [
+    {"id": "venv", "x": 56, "y": 116, "w": 200, "h": 56, "kind": "store", "name": "venv", "sub": ".venv/bin/suno-dl"},
+    {"id": "proc", "x": 312, "y": 116, "w": 240, "h": 56, "kind": "focal", "name": "suno-dl process", "sub": "console_scripts entry"},
+    {"id": "outdir", "x": 56, "y": 216, "w": 200, "h": 56, "kind": "store", "name": "Output dir", "sub": "./downloads"},
+    {"id": "timer", "x": 312, "y": 216, "w": 240, "h": 56, "kind": "async", "name": "CI harness timer", "sub": "systemd · every 3h"},
+    {"id": "repo", "x": 56, "y": 316, "w": 200, "h": 56, "kind": "store", "name": "Git repo", "sub": "local checkout"},
+    {"id": "logs", "x": 312, "y": 316, "w": 240, "h": 56, "kind": "store", "name": "CI logs", "sub": "state/suno-ci-local"},
+
+    {"id": "suno", "x": 648, "y": 116, "w": 288, "h": 56, "kind": "external", "name": "suno.com", "sub": "HTML pages · port 443"},
+    {"id": "cdn", "x": 648, "y": 216, "w": 288, "h": 56, "kind": "external", "name": "cdn1 · cloudfront", "sub": "media objects · 443"},
+    {"id": "gh", "x": 648, "y": 316, "w": 288, "h": 56, "kind": "external", "name": "GitHub", "sub": "git push · Actions (quota)"}
+  ],
+  "edges": [
+    {"from": "venv", "to": "proc", "port": "right", "label": "EXEC", "kind": "local"},
+    {"from": "proc", "to": "outdir", "port": "left", "label": "WRITE", "kind": "accent"},
+    {"from": "proc", "to": "suno", "port": "right", "kind": "http"},
+    {"from": "proc", "to": "cdn", "port": "right", "kind": "http"},
+    {"from": "timer", "to": "repo", "port": "left", "kind": "async"},
+    {"from": "timer", "to": "logs", "port": "bottom", "kind": "async"},
+    {"from": "repo", "to": "gh", "port": "right", "kind": "local"}
+  ],
+  "legend": ["focal", "store", "external", "http", "accent", "async"]
+}

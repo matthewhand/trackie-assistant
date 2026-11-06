@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>External dependencies and their failure boundaries</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5; --color-ink: #2d3142; --color-muted: #4f5d75;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 3rem 2rem; }
+    .frame { max-width: 1120px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500;
+                letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted);
+                margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+          font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Integrations · External systems</p>
+    <h1>External dependencies and their failure boundaries</h1>
+    <svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="integrations-title integrations-desc">
+      <title id="integrations-title">External dependencies and their failure boundaries</title>
+      <desc id="integrations-desc">The CLI integrates with four external systems, all over HTTPS with no authentication: Suno page endpoints, the media CDN, an optional headless browser for profile discovery, and GitHub for source control. Each has a distinct failure mode the tool handles explicitly.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+      <rect x="24" y="64" width="300" height="372" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="40" y="68" width="58" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="69" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">CLIENT</text>
+      <rect x="664" y="64" width="312" height="372" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="680" y="68" width="191" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="775" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">EXTERNAL (HTTPS, NO AUTH)</text>
+      <path d="M 292,251 H 664 Q 672,251 672,259 V 176 Q 672,168 680,168 H 696" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <path d="M 292,258 H 648 Q 656,258 656,266 V 264 Q 656,256 664,256 H 696" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <path d="M 292,265 H 632 Q 640,265 640,257 V 276 Q 640,284 648,284 H 696" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <path d="M 292,272 H 616 Q 624,272 624,264 V 364 Q 624,372 632,372 H 696" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="56" y="232" width="236" height="60" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="232" width="236" height="60" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="174" y="259" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">suno-dl</text>
+      <text x="174" y="275" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">httpx · Playwright</text>
+      <rect x="696" y="108" width="248" height="60" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="108" width="248" height="60" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="820" y="135" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Suno pages</text>
+      <text x="820" y="151" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HTML + RSC · 403 = skip</text>
+      <rect x="696" y="196" width="248" height="60" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="196" width="248" height="60" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="820" y="223" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Media CDN</text>
+      <text x="820" y="239" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">signed URLs · 403 = retry</text>
+      <rect x="696" y="284" width="248" height="60" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="284" width="248" height="60" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="820" y="311" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Chromium</text>
+      <text x="820" y="327" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">local binary · no egress</text>
+      <rect x="696" y="372" width="248" height="60" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="372" width="248" height="60" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="820" y="399" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">GitHub</text>
+      <text x="820" y="415" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">git over SSH/HTTPS</text>
+      <line x1="32" y1="484" x2="968" y2="484" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="32" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+      <rect x="128" y="492" width="10" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="144" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">FOCAL</text>
+      <rect x="206" y="492" width="10" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <text x="222" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">EXTERNAL</text>
+      <line x1="302" y1="497" x2="326" y2="497" stroke="#2e5aa8" stroke-width="1.2"/>
+      <text x="334" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">HTTP</text>
+      <rect x="390" y="492" width="10" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="406" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">ASYNC</text>
+    </svg>
+  </div>
+</body>
+</html>

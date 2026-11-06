@@ -1,0 +1,27 @@
+{
+  "slug": "dataflow",
+  "eyebrow": "Data flow · Track lifecycle",
+  "title": "From page payload to file on disk",
+  "desc": "A track moves through four transformations: the RSC payload becomes TrackInfo objects, media URLs are resolved and host-checked, a filename is derived and sanitised, and the streamed bytes are written atomically to the output directory. Nothing untrusted reaches the filesystem unfiltered.",
+  "viewbox": [1000, 460],
+  "width": 1120,
+  "nodes": [
+    {"id": "payload", "x": 40, "y": 180, "w": 160, "h": 60, "kind": "external", "name": "RSC payload", "sub": "untrusted text"},
+    {"id": "trackinfo", "x": 248, "y": 180, "w": 160, "h": 60, "kind": "focal", "name": "TrackInfo", "sub": "id · title · urls"},
+    {"id": "uris", "x": 456, "y": 180, "w": 160, "h": 60, "kind": "module", "name": "Media URLs", "sub": "allow-listed"},
+    {"id": "fname", "x": 664, "y": 180, "w": 160, "h": 60, "kind": "module", "name": "Filename", "sub": "sanitised"},
+    {"id": "file", "x": 872, "y": 84, "w": 160, "h": 60, "kind": "store", "name": "File on disk", "sub": "name + ext"},
+
+    {"id": "reject", "x": 456, "y": 320, "w": 160, "h": 60, "kind": "async", "name": "Discarded", "sub": "non-allow-listed"},
+    {"id": "part", "x": 664, "y": 320, "w": 160, "h": 60, "kind": "async", "name": ".part temp", "sub": "atomic rename"}
+  ],
+  "edges": [
+    {"from": "payload", "to": "trackinfo", "port": "right", "label": "PARSE", "kind": "local"},
+    {"from": "trackinfo", "to": "uris", "port": "right", "label": "RESOLVE", "kind": "local"},
+    {"from": "uris", "to": "fname", "port": "right", "label": "DERIVE", "kind": "local"},
+    {"from": "fname", "to": "file", "port": "right", "label": "WRITE", "kind": "accent"},
+    {"from": "uris", "to": "reject", "port": "bottom", "kind": "async"},
+    {"from": "fname", "to": "part", "port": "bottom", "kind": "async"}
+  ],
+  "legend": ["external", "focal", "module", "store", "local", "accent", "async"]
+}

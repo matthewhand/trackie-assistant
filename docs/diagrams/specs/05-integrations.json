@@ -1,0 +1,27 @@
+{
+  "slug": "integrations",
+  "eyebrow": "Integrations · External systems",
+  "title": "External dependencies and their failure boundaries",
+  "desc": "The CLI integrates with four external systems, all over HTTPS with no authentication: Suno page endpoints, the media CDN, an optional headless browser for profile discovery, and GitHub for source control. Each has a distinct failure mode the tool handles explicitly.",
+  "viewbox": [1000, 520],
+  "width": 1120,
+  "zones": [
+    {"x": 24, "y": 64, "w": 300, "h": 372, "label": "CLIENT"},
+    {"x": 664, "y": 64, "w": 312, "h": 372, "label": "EXTERNAL (HTTPS, NO AUTH)"}
+  ],
+  "nodes": [
+    {"id": "cli", "x": 56, "y": 232, "w": 236, "h": 60, "kind": "focal", "name": "suno-dl", "sub": "httpx · Playwright"},
+
+    {"id": "pages", "x": 696, "y": 108, "w": 248, "h": 60, "kind": "external", "name": "Suno pages", "sub": "HTML + RSC · 403 = skip"},
+    {"id": "cdn", "x": 696, "y": 196, "w": 248, "h": 60, "kind": "external", "name": "Media CDN", "sub": "signed URLs · 403 = retry"},
+    {"id": "browser", "x": 696, "y": 284, "w": 248, "h": 60, "kind": "external", "name": "Chromium", "sub": "local binary · no egress"},
+    {"id": "github", "x": 696, "y": 372, "w": 248, "h": 60, "kind": "external", "name": "GitHub", "sub": "git over SSH/HTTPS"}
+  ],
+  "edges": [
+    {"from": "cli", "to": "pages", "port": "right", "kind": "http"},
+    {"from": "cli", "to": "cdn", "port": "right", "kind": "http"},
+    {"from": "cli", "to": "browser", "port": "right", "kind": "async"},
+    {"from": "cli", "to": "github", "port": "right", "kind": "async"}
+  ],
+  "legend": ["focal", "external", "http", "async"]
+}

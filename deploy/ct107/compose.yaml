@@ -1,0 +1,95 @@
+# Trackie Assistant — CT107 Compose project (#173).
+#
+# Two services, one image:
+#   gateway  serves the WebUI behind the operator's TLS proxy
+#   worker   the only service permitted to run a real sync, gated by
+#            TRACKIE_REAL_SYNC_APPROVED (0 = intentional standby, #136)
+#
+# Neither service publishes a port on a public interface: the gateway binds
+# loopback by default and the TLS proxy is what faces the network. Every
+# container keeps a read-only root filesystem, drops all capabilities and runs
+# as the numeric UID/GID the archive was provisioned for.
+#
+# Paths are overridable so this file can be exercised on a throwaway host
+# without touching production media. Defaults match the deployed layout.
+
+name: trackie-assistant
+
+x-trackie: &trackie
+  image: ${TRACKIE_IMAGE:?Set TRACKIE_IMAGE to an explicit reviewed image tag}
+  build:
+    context: .
+    args:
+      # Pin a digest for a real build; the tag is only the local default.
+      RUNTIME_BASE: ${RUNTIME_BASE:-cgr.dev/chainguard/wolfi-base:latest}
+      # Must match the wheel in incoming/; the build refuses a mismatch.
+      CLI_VERSION: ${CLI_VERSION:?Set CLI_VERSION to the bundled wheel version}
+      INSTALL_BROWSER: ${INSTALL_BROWSER:-0}
+  user: "10001:10001"
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 30s
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+  env_file:
+    # Optional operator overrides; absent file is not an error.
+    - path: .env
+      required: false
+
+services:
+  gateway:
+    <<: *trackie
+    command: ["ct107-gateway"]
+    environment:
+      TRACKIE_ARCHIVE: /data/archive
+      TRACKIE_MEDIA: /media/suno
+      TRACKIE_GATEWAY_PORT: "8760"
+      # 0: CT107 is not a Home Assistant add-on. `--ingress` resolves the
+      # Supervisor's Docker DNS name and refuses every other peer, so it cannot
+      # start here; the TLS proxy rewrites Host to localhost instead.
+      TRACKIE_GATEWAY_INGRESS: ${TRACKIE_GATEWAY_INGRESS:-0}
+      # Access policy (#162). Credentials come from the operator's .env; with
+      # REQUIRE_AUTH=1 and no credentials the process refuses to start rather
+      # than serving an open gateway.
+      TRACKIE_GATEWAY_REQUIRE_AUTH: ${TRACKIE_GATEWAY_REQUIRE_AUTH:-0}
+      TRACKIE_GATEWAY_LAN_READONLY: ${TRACKIE_GATEWAY_LAN_READONLY:-0}
+      TRACKIE_GATEWAY_TRUSTED_CIDRS: ${TRACKIE_GATEWAY_TRUSTED_CIDRS:-}
+    ports:
+      # Loopback only. The TLS proxy is the network-facing listener.
+      - "${TRACKIE_GATEWAY_HOST_IP:-127.0.0.1}:${TRACKIE_GATEWAY_HOST_PORT:-8760}:8760"
+    volumes:
+      - ${TRACKIE_ARCHIVE_DIR:-/data/trackie-assistant/archive}:/data/archive
+      - ${TRACKIE_MEDIA_DIR:-/data/trackie-assistant/media}:/media/suno:ro
+    healthcheck:
+      test: ["CMD", "ct107-healthcheck", "gateway"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    <<: *trackie
+    command: ["ct107-worker"]
+    environment:
+      TRACKIE_ARCHIVE: /data/archive
+      TRACKIE_MEDIA: /media/suno
+      # 0 = standby, not a failure. Flipping this to 1 is a deployment
+      # decision, made with the runbook open.
+      TRACKIE_REAL_SYNC_APPROVED: ${TRACKIE_REAL_SYNC_APPROVED:-0}
+      TRACKIE_SYNC_INTERVAL_MINUTES: ${TRACKIE_SYNC_INTERVAL_MINUTES:-360}
+      TRACKIE_MODEL_VERSION: ${TRACKIE_MODEL_VERSION:-}
+    volumes:
+      - ${TRACKIE_ARCHIVE_DIR:-/data/trackie-assistant/archive}:/data/archive
+      # Read-write: this is the service that archives new media.
+      - ${TRACKIE_MEDIA_DIR:-/data/trackie-assistant/media}:/media/suno
+    healthcheck:
+      test: ["CMD", "ct107-healthcheck", "worker"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

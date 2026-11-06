@@ -1,0 +1,181 @@
+{
+  "id": "5e648da0-9a17-4104-bd3d-cdd75b3ebb26",
+  "name": "Fractal Static",
+  "is_public": true,
+  "is_hidden": false,
+  "is_trashed": false,
+  "current_page": 1,
+  "num_total_results": 17,
+  "playlist_clips": [
+    {
+      "clip": {
+        "id": "560411ce-b0a4-438e-977a-a47d003df16e",
+        "title": "Reanimate (feat. Chainer & Walter Benjamin)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "83c151ba-33e3-461f-b918-30882c177fd6",
+        "title": "War-Name Aspirant (feat. Alesha & Charles Taylor)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "0cc33863-e2a1-413a-bbb2-f781955971cc",
+        "title": "Subtlety (feat. Jacques Derrida and Tamiyo)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "0273e7fa-4eae-4ef4-bdf5-4a93cbae63ae",
+        "title": "Time Sieve (feat. Sharuum the Hegemon & Henri Bergson)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "2ec2916e-b04f-431e-a9f8-8cb8267b2d1d",
+        "title": "Reject Imperfection (feat. Jin-Gitaxias & Georges Canguilhem)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "872bfa8a-cd53-4059-9df2-af7ed62a8f70",
+        "title": "Of One Mind (feat. Winota & Andy Clark)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "3cbe5ad7-76fc-435d-8f36-c79da1cb6ec3",
+        "title": "Jace, the Living Guildpact (feat. Jace Beleren & David Hume)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1aad8b96-24c0-4ad0-ba3b-43651a9d1eb1",
+        "title": "Vv'viza, Orbital Overseer (feat. Michel Foucault and Vv'viza)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "bc33c990-a07c-4d37-9627-f2ff524ef0c0",
+        "title": "Make Disappear (feat. Anhelo & Max Stirner)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "cd419d92-454f-4818-a166-8379f00d9deb",
+        "title": "Wrath of God (feat. Elspeth Tirel & Søren Kierkegaard)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "0b888921-5694-44b4-89cf-fa233a824417",
+        "title": "Exploration (feat. Azusa & Henry David Thoreau)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "70336029-6cd7-468a-96fc-98d904facc04",
+        "title": "Blasphemous Act (feat. Rowan Kenrith & Georges Bataille)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "3753755d-a1dc-438c-865e-d7f9b41ef07b",
+        "title": "Scroll Rack (feat. Kasmina & Mark Fisher)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "4c0e52ac-e485-4749-89bf-64e2895b10bd",
+        "title": "Unexpected Results (feat. Ral Zarek & Karl Popper)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "fc855479-b2ac-4139-ade1-3834f6c94a62",
+        "title": "Finest Hour (feat. Hannah Arendt and Elspeth Tirel)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "f9418e86-c4bc-4b20-9e34-a5be2469989c",
+        "title": "Memory Lapse (feat. Dragonlord Ojutai & Miranda Fricker)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "e7fc6604-f38d-4765-b1b1-7319cc39b19c",
+        "title": "Dig Through Time (feat. Narset & Michel-Rolph Trouillot)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    }
+  ]
+}

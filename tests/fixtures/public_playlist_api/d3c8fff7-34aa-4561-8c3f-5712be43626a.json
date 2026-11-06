@@ -1,0 +1,181 @@
+{
+  "id": "d3c8fff7-34aa-4561-8c3f-5712be43626a",
+  "name": "Dark Cypher",
+  "is_public": true,
+  "is_hidden": false,
+  "is_trashed": false,
+  "current_page": 1,
+  "num_total_results": 17,
+  "playlist_clips": [
+    {
+      "clip": {
+        "id": "428d9007-8fa9-4052-897e-c02096ba4f7b",
+        "title": "Thaumatic Compass (feat. Jace Beleren & Ludwig Wittgenstein)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b1fd3796-565a-4441-96d8-a701f7d1b808",
+        "title": "Kaito, Bane of Nightmares (feat. Jean Baudrillard and Kaito Shizuki)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "cbc19c6a-8851-4b11-bb09-5b47ea6c46c1",
+        "title": "Force of Will (feat. Narset, Parter of Veils and Arthur Schopenhauer)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1e4b6482-c4d7-4ec4-937d-ee0cb701ff7b",
+        "title": "Ensnaring Bridge (feat. Kaya & Michel Foucault)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1dc429ae-8307-4bc1-949d-74d9e35646ff",
+        "title": "Teysa Karlov (feat. Friedrich Nietzsche and Teysa Karlov)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "1e4a4622-d580-4049-9b8f-b7d9a5c7eb84",
+        "title": "Goro-Goro and Satoru (feat. Sun Tzu, Goro-Goro, and Satoru)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "9a97cd44-0c7d-4285-bc22-2d0b59bd8379",
+        "title": "Cyclonic Rift (feat. Ral Zarek and Walter Benjamin)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "c6806bbc-1a13-40c4-a71b-1fd80c45bbef",
+        "title": "Krark, the Thumbless (feat. Krark & Lucretius)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "a18366ed-6c9d-4dd9-8949-52a5007e0076",
+        "title": "Burnout (feat. Tezzeret & Byung-Chul Han)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "61c8283d-59ca-47ab-950b-02fcbd5bdc72",
+        "title": "Fear of Missing Out (feat. The Mindskinner & Donald Winnicott)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "6004b547-49fd-4e7c-9298-a1e3dca5623b",
+        "title": "Sheoldred, the Apocalypse (feat. Sheoldred & Franco \"Bifo\" Berardi)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "17ba2c82-46fc-499a-b563-c96637789e73",
+        "title": "Orcish Bowmasters [nsfw] (feat. Niccolò Machiavelli and Ob Nixilis)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "f379b9e6-1c70-4383-8408-7841a85c60b0",
+        "title": "Word of Command (feat. Ib Halfheart & James Joyce)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "4bd8db41-6d2f-4274-92da-1c76b4f68116",
+        "title": "Demonic Pact (feat. Liliana, Defiant Necromancer and Friedrich Nietzsche)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "b7020c5b-b0fd-4908-b0cf-d42d3fe92e97",
+        "title": "Lingering Souls (feat. Sorin, Lord of Innistrad and Hannah Arendt)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "26e3a7fa-80e2-4572-9184-62174c817c1f",
+        "title": "Tamiyo, the Moon Sage [nsfw] (feat. Zhuangzi and Tamiyo)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    },
+    {
+      "clip": {
+        "id": "a1ee6279-ea39-42ec-997c-ba6ab37cad58",
+        "title": "Farewell (feat. Elspeth, Sun's Champion and Baruch Spinoza)",
+        "entity_type": "song_schema",
+        "is_public": true,
+        "is_hidden": false,
+        "is_trashed": false
+      }
+    }
+  ]
+}
