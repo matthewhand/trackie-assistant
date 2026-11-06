@@ -5,8 +5,8 @@
 [![CI](https://github.com/matthewhand/trackie-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/matthewhand/trackie-assistant/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Your Suno music, in your library.** Archive public playlists, profiles and songs
-with verified producer names, artist tags and cover art — ready for Music Assistant.
+**Save cloud music locally** (currently Suno), then listen with your player
+of choice, like Music Assistant.
 
 > **Linux preview 1.6.2rc1** · Python 3.13+ · AMD64 containers/add-on<br>
 > [Download the release](https://github.com/matthewhand/trackie-assistant/releases/tag/v1.6.2rc1) · [Release notes and limits](docs/releases/v1.6.2rc1.md)
