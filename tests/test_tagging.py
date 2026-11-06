@@ -48,6 +48,22 @@ def _tiny(tmp_path: Path, name: str = "song.m4a") -> Path:
     return dest
 
 
+def _native_muxed_tiny(tmp_path: Path, name: str = "song.m4a") -> Path:
+    """Use this FFmpeg's muxer metadata for publication-success tests.
+
+    The checked-in fixture records an older Lavf version. A newer FFmpeg
+    legitimately fails the preservation guard when remuxing that encoder tag.
+    Normalize only this disposable fixture; retain the real evidence checks.
+    """
+    dest = tmp_path / name
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(FIXTURE), "-map", "0", "-c", "copy", str(dest)],
+        check=True,
+        capture_output=True,
+    )
+    return dest
+
+
 def test_fixture_is_a_real_m4a() -> None:
     """Guard: a truncated or non-media fixture would make every test vacuous."""
     from mutagen import File
@@ -552,7 +568,7 @@ def test_ffmpeg_private_stage_ignores_planted_legacy_symlink_and_preserves_mode(
 
     if not shutil.which("ffmpeg"):
         pytest.skip("ffmpeg not available")
-    path = _tiny(tmp_path, "Artist_Song.m4a")
+    path = _native_muxed_tiny(tmp_path, "Artist_Song.m4a")
     os.chmod(path, 0o640)
     before = path.stat()
     outside = tmp_path / "outside.m4a"
@@ -921,7 +937,7 @@ def test_ffmpeg_reports_directory_sync_failure_after_replacement(
 
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         pytest.skip("ffmpeg and ffprobe are required")
-    path = _tiny(tmp_path)
+    path = _native_muxed_tiny(tmp_path)
     real_replace = tagging.os.replace
     real_fsync = tagging.os.fsync
     replaced = False
