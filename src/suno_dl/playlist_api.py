@@ -1,7 +1,8 @@
 """Narrow anonymous read-only transport for public playlist membership.
 
-This is the sole exception to the project's no-private-API rule: one exact
-HTTPS GET endpoint on Suno's public playlist metadata service. It never
+This transport permits one exact HTTPS GET endpoint on Suno's public playlist
+metadata service. Public profile enumeration has its own narrowly scoped
+read-only transport in profile_playlists.py. It never
 forwards cookies, credentials, redirects, or requests to another API path.
 """
 

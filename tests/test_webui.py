@@ -234,7 +234,7 @@ def test_status_and_pages_over_real_http(server) -> None:
     code, status = _get(base + "/api/status")
     assert code == 200 and "version" in status
     code, payload = _get(base + "/api/runs")
-    assert code == 200 and payload == {"runs": []}
+    assert code == 200 and payload == {"runs": [], "failed_tracks": [], "last_retry_result": None}
     code, _ = _get(base + "/nope")
     assert code == 404
 
@@ -582,6 +582,7 @@ def test_media_endpoints_over_http(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     song = downloads / "Song One.m4a"
     song.write_bytes(b"fake-audio-bytes")
 
+    monkeypatch.setattr(webui.mimetypes, "guess_type", lambda _: (None, None))
     manager = RunManager(tmp_path)
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), _make_handler(tmp_path, manager))
     worker = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -640,7 +641,7 @@ def test_library_endpoint_reads_genres_dir(tmp_path: Path) -> None:
         assert body["clips"][0]["id"] == "a"
         code, page = _get(base + "/")
         assert code == 200 and ("genre-pane" in page or "chips" in page or "Suno archive" in page)
-        assert "api/library" in page
+        assert "songs_url:'api/songs'" in page
     finally:
         httpd.shutdown()
 
@@ -980,6 +981,9 @@ def test_webui_cli_loads_selected_archive_not_working_directory(
 
         def serve_forever(self):
             return None
+
+        def server_close(self):
+            pass
 
     monkeypatch.setattr(webui, "ThreadingHTTPServer", FakeServer)
     result = CliRunner().invoke(webui.webui_cli, ["--archive", str(archive)])

@@ -1,8 +1,8 @@
 # Trackie Assistant
 
-Linux preview: add-on **1.6.2-rc2**, package **1.6.2rc2**.
+Linux preview: add-on **1.6.2-rc16**, package **1.6.2rc16**.
 
-> **Linux preview 1.6.2rc2:** Linux audio sync and previews verify producers from each clip's own canonical page and publish prepared file groups. Existing-file repairs require the reviewed offline migration. This release targets Python 3.13 on Linux; container and HAOS add-on validation covers AMD64. Indexed recordings are reused unchanged. See the release notes for discovery and repair limits.
+> **Linux preview 1.6.2rc16:** Linux audio sync and previews verify producers from each clip's own canonical page and publish prepared file groups. Existing-file repairs require the reviewed offline migration. This release targets Python 3.13 on Linux; container and HAOS add-on validation covers AMD64. Indexed recordings are reused unchanged. See the release notes for discovery and repair limits.
 
 ### Current Linux candidate scope
 
@@ -21,7 +21,7 @@ library — where [Music Assistant](https://www.music-assistant.io)'s
 
 ## Setup
 
-1. **Profiles** (Options): add one or more handles, e.g. `@drinko`.
+1. **Profiles** (Options): add one or more handles, e.g. `@your-handle`.
    Multiple profiles = multiple users' public catalogs; each sync walks
    them all, politely and sequentially. Entries may be bare handles, handles
    starting with `@`, or public `https://suno.com/@handle`, `/playlist/id`,
@@ -106,38 +106,15 @@ forgets the recorded ages and starts over from file timestamps.
 > checkout of this repo first (see *Updating after a new release* below);
 > until then, leave the three options at their defaults.
 
-## Tags: why tracks showed as `[unknown]`
+## Artist and title tags
 
-Every downloaded file is written with embedded metadata — `artist` is the
-profile handle (`drinko`), `title` is the full track title. Music Assistant
-needs it: without tags it guesses from the filename, which is how tracks
-showed up as `[unknown]` and how a title like `Ajani, Nacatl Pariah (feat.
-Pyotr Kropotkin)` got cut off after `feat` (it splits a basename at the first
-`.`). New files also use `feat_` in the filename so the guess cannot bite
-even if the tags are lost.
+Trackie verifies the producer from each song's own public page. New downloads
+use the verified producer in the filename and write the producer and full title
+into the staged audio file with Mutagen.
 
-Tags are written with mutagen if it is installed, otherwise with
-`ffmpeg -c copy` — which the add-on image already ships. Either way the audio
-is never re-encoded.
-
-### One-shot retag of the existing library
-
-An archive seeded before tagging has no metadata. Fix it in place, from the
-terminal add-on (or `ha addons` / `ha cli`), without re-downloading
-anything:
-
-```console
-# one profile
-suno-dl --retag /media/suno/drinko --retag-archive-root /media/suno
-
-# or every profile under /media/suno
-suno-dl --retag /media/suno --retag-archive-root /media/suno
-```
-
-Safe to re-run: already-tagged files are skipped, nothing is renamed, and no
-request is made. Add `--artist drinko` to force the artist tag, or
-`--dry-run` to preview. Then rescan in Music Assistant so the new metadata is
-picked up.
+Use the [offline producer migration](../../docs/producer-migration.md) to
+correct older filenames and artist tags after stopping all library writers.
+Rescan the library in Music Assistant after completing the migration.
 
 ## Updating after a new release
 
@@ -248,3 +225,8 @@ FFmpeg 9 packages. Application dependencies live in /opt/venv. Chromium's
 runtime libraries come from the signed APK repository; Playwright installs
 its matched headless browser in /opt/playwright. The obsolete recorder helper
 is removed because Trackie does not record browser sessions.
+
+## Remote backend mode
+
+Use remote mode to connect this ingress UI to a separately managed backend.
+The add-on runs no local sync loop in that mode. [Connection and scheduling guide](../../docs/scheduled-sync.md).

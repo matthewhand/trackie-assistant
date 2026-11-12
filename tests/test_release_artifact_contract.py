@@ -9,6 +9,8 @@ import zipfile
 from email.parser import BytesParser
 from pathlib import Path
 
+from packaging.version import Version
+
 from suno_dl import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +37,7 @@ def test_release_candidate_version_and_addon_identity() -> None:
 
     addon = json.loads((ROOT / "addon/suno_dl/config.json").read_text())
     assert addon["name"] == addon["panel_title"] == "Trackie Assistant"
-    assert addon["version"] == __version__.replace("rc", "-rc")
+    assert Version(addon["version"]) == Version(__version__)
     assert addon["arch"] == ["amd64"]
     repository = json.loads((ROOT / "repository.json").read_text())
     assert repository["url"] == addon["url"]
@@ -151,6 +153,20 @@ def test_vendored_wheel_matches_reviewed_release_bytes() -> None:
     wheels = sorted(WHEEL_DIR.glob("*.whl"))
     assert len(wheels) == 1
     reviewed = {
+        "1.6.2rc16": "6546c1db250045f3c718b639b3ee6e9c2d1f944d7dbb0cca1de428eb3892088d",
+        "1.6.2rc15": "6c102a4ce73cafebd8066e9cf5c18f815feb24da6d254151da8c1c9bb181d48c",
+        "1.6.2rc14": "936bf95c783d8cb73ad62653a0c64c4d64bca81398ec9960928afcac503b5408",
+        "1.6.2rc13": "9b342a4cb1b03e1ee34ae66a79f029dc3e0fcbaeeff93d2ce0b06047f1d1b1e3",
+        "1.6.2rc12": "629ea79d2539411f3f3e82ae981128cbb7221c84153b3b311501874bc14a44c0",
+        "1.6.2rc11": "9660537f201dc504d75ba582f6f6e108098df65fab0f2a775a6dc3b92081bc2d",
+        "1.6.2rc10": "f5ba0a5f890d96955fc28ae952b4f0bf49d7811c6b7bb16d249e783042252f7f",
+        "1.6.2rc9": "b58a952748d579902b30355de94605a26293543d74cd2f4ba2f7a15766842b24",
+        "1.6.2rc8": "25dab6b97c5f47f4ddc85958b80578f413dac3727b183df9de61e9cce44d0bcd",
+        "1.6.2rc7": "3b23727fcf0e5d9e22b6ff78f77aa71be4d541a81138d9d7f5983c309c580fa8",
+        "1.6.2rc6": "817a79cf45674690a13ac6aa0ac023367220ddd70d45a4f809a8e8dccb223870",
+        "1.6.2rc5": "5f887451d8913c334f68b7b3a5da5dd4e85c420c86f2c02aa3f85c17ab6d0843",
+        "1.6.2rc4": "62c57c6627b5875a16dd9d93ed2389b2724a054278b5ada882ea2e97c70bb4f0",
+        "1.6.2rc3": "05218542c979a9b1b36348a951eff0a15d2d5cb7aa3326f69438c55ae9dc73d4",
         "1.6.2rc1": "e2ba4803f6635f16e718f522a07cd7724fadcfb7d1c4ba4e14c32d83e6467c25",
         "1.6.2rc2": "71c4802a1a54e7cc4304881277cd832c279170e26e4e6ad7d8674a37655bd8c8",
     }

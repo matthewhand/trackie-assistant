@@ -65,6 +65,8 @@ import {
   withTimeout,
 } from "./suno-genre-core.js?v=7";
 
+const SONGS_PER_PAGE = 50;
+
 const DEFAULTS = {
   title: "Suno archive",
   agent_id: DEFAULT_AGENT_ID,
@@ -77,6 +79,8 @@ const DEFAULTS = {
   clips_url: "/local/suno-genres/clips.json",
   genres_url: "/local/suno-genres/genres.json",
   library_url: "",
+  songs_url: "",
+  ingress_app: "",
   // Optional: where to POST failed long actions so the full cause is logged server-side.
   client_error_url: "",
   agent_timeout_s: AGENT_TIMEOUT_MS / 1000,
@@ -509,6 +513,14 @@ class SunoGenreCard extends HTMLElement {
     this._config = Object.assign({}, DEFAULTS, config || {});
     this._activeCategory = "All";
     this._search = "";
+    this._page = 1;
+    this._pageQuery = "";
+    this._livePage = null;
+    this._liveKey = "";
+    this._focusPage = false;
+    this._ingress = null;
+    this._liveRequest?.abort();
+    this._liveRequest = null;
     this._prompt = "Write the next song in this series (title, style, lyrics)";
     this._aiResponse = "";
     this._aiError = "";
@@ -559,7 +571,10 @@ class SunoGenreCard extends HTMLElement {
   set hass(h) {
     const first = !this._hass;
     this._hass = h;
-    if (first && this._config) this._render();
+    if (first && this._config) {
+      if (this._config.ingress_app) this._loadLivePage();
+      else this._render();
+    }
   }
 
   get hass() {
@@ -567,7 +582,10 @@ class SunoGenreCard extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this._config && !this._clips.length && !this._loadError) this._loadData();
+    if (this._config && !this._clips.length && !this._loadError) {
+      if (this._usesLiveSongs()) this._loadLivePage();
+      else this._loadData();
+    }
     if (!this._keyHandler) this._keyHandler = (e) => this._onKey(e);
     if (typeof window !== "undefined" && window.addEventListener)
       window.addEventListener("keydown", this._keyHandler);
@@ -598,7 +616,116 @@ class SunoGenreCard extends HTMLElement {
     this._genres = ensureGenres(this._genres);
   }
 
+  _usesLiveSongs() {
+    return !!(this._config.songs_url || this._config.ingress_app);
+  }
+
+  async _songsEndpoint() {
+    if (this._config.songs_url) return new URL(this._config.songs_url, location.href);
+    if (!this._ingress) {
+      this._ingress = (async () => {
+        const slug = this._config.ingress_app;
+        const [info, { session }] = await Promise.all([
+          this._hass.callWS({ type: "supervisor/ingress/info", slug }),
+          this._hass.callWS({ type: "supervisor/ingress/session", slug }),
+        ]);
+        const url = new URL(info.ingress_url, location.origin);
+        const root = /^\/api\/hassio_ingress\/[A-Za-z0-9_-]+(?:\/|$)/.exec(url.pathname);
+        if (url.origin !== location.origin || !root || typeof session !== "string" || !/^[A-Za-z0-9_-]+$/.test(session)) {
+          throw new Error("Invalid Home Assistant ingress configuration");
+        }
+        const secure = location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = "ingress_session=" + session + "; Path=/api/hassio_ingress/; SameSite=Strict" + secure;
+        return new URL(root[0].replace(/\/?$/, "/") + "api/songs", location.origin);
+      })().catch((error) => {
+        this._ingress = null;
+        throw error;
+      });
+    }
+    return this._ingress;
+  }
+
+  async _fetchSongPage(query, page, { signal, refresh } = {}) {
+    const params = new URLSearchParams({
+      page, category: query.category, search: query.search, sort: query.sort,
+      pinned: query.pinned ? "1" : "0", unsorted: query.unsorted ? "1" : "0",
+      audio: query.audio ? "1" : "0",
+    });
+    if (refresh) params.set("refresh", "1");
+    const request = async () => {
+      const url = new URL(await this._songsEndpoint());
+      url.search = params.toString();
+      const response = await fetch(url, { cache: "no-cache", signal });
+      return { url, response };
+    };
+    let { url, response } = await request();
+    if (this._config.ingress_app && [401, 403].includes(response.status)) {
+      this._ingress = null;
+      ({ url, response } = await request());
+    }
+    if (!response.ok) throw new Error("Catalogue HTTP " + response.status);
+    const data = await response.json();
+    if (!Array.isArray(data.clips) || !Number.isInteger(data.total) || !Number.isInteger(data.page)) {
+      throw new Error("Invalid catalogue response");
+    }
+    return { data, url };
+  }
+
+  async _loadLivePage(refresh = false) {
+    if (this._config.ingress_app && !this._hass) return;
+    const query = this._songQuery();
+    const key = JSON.stringify([query, this._page]);
+    if (!refresh && this._liveKey === key) return;
+    this._liveKey = key;
+    this._liveRequest?.abort();
+    const controller = new AbortController();
+    this._liveRequest = controller;
+    this._livePage = null;
+    this._loading = true;
+    this._loadError = "";
+    this._render();
+    try {
+      const { data, url } = await this._fetchSongPage(query, this._page, {
+        signal: controller.signal, refresh,
+      });
+      if (controller.signal.aborted) return;
+      this._livePage = data;
+      this._liveRoot = url.href.replace(/api\/songs(?:\?.*)?$/, "");
+      this._page = data.page;
+      if (this._focusPage) this._pendingFocus = "#song-page-status";
+      this._focusPage = false;
+      this._liveKey = JSON.stringify([query, this._page]);
+      this._genres = ensureGenres(data.genres);
+      this._clips = data.clips;
+      this._tracks = data.tracks || {};
+      this._tracksInfo = { state: "ok", reason: "" };
+    } catch (_) {
+      if (controller.signal.aborted) return;
+      this._livePage = null;
+      this._clips = [];
+      this._tracks = {};
+      this._loadError = "Could not load the live Trackie catalogue. Check the connection and try again.";
+    } finally {
+      if (!controller.signal.aborted) {
+        this._loading = false;
+        this._render();
+      }
+    }
+  }
+
+  async _contextClips(category = this._activeCategory, search = this._search) {
+    if (!this._usesLiveSongs()) return filterClips(this._clips, this._genres, category, search);
+    const query = { ...this._songQuery(), category, search, pinned: false, unsorted: false, audio: false };
+    const first = (await this._fetchSongPage(query, 1)).data;
+    const clips = first.clips.slice();
+    for (let page = 2; page <= first.pages; page++) {
+      clips.push(...(await this._fetchSongPage(query, page)).data.clips);
+    }
+    return clips;
+  }
+
   async _loadData() {
+    if (this._usesLiveSongs()) return this._loadLivePage(!!this._livePage);
     this._loading = true;
     this._loadError = "";
     this._render();
@@ -692,6 +819,7 @@ class SunoGenreCard extends HTMLElement {
   _audioUrl(id) {
     const t = this._tracks[id];
     if (!t || !t.audio) return "";
+    if (this._usesLiveSongs()) return this._liveRoot + String(t.audio).replace(/^\//, "");
     try {
       const abs = new URL(this._config.tracks_url, typeof location !== "undefined" ? location.href : undefined).href;
       const root = abs.replace(/api\/tracks(?:[?#].*)?$/, "");
@@ -709,6 +837,41 @@ class SunoGenreCard extends HTMLElement {
   _visible() {
     const base = this._filtered();
     return sortClips(quickFilter(base, this._genres, this._tracks, this._qf), this._sort, this._tracks);
+  }
+
+  _songQuery() {
+    return {
+      category: this._activeCategory,
+      search: this._search,
+      sort: this._sort,
+      ...this._qf,
+    };
+  }
+
+  _songPage() {
+    const query = JSON.stringify(this._songQuery());
+    if (this._pageQuery !== query) {
+      this._pageQuery = query;
+      this._page = 1;
+    }
+    if (this._usesLiveSongs()) {
+      const key = JSON.stringify([this._songQuery(), this._page]);
+      if (this._liveKey !== key && (!this._config.ingress_app || this._hass)) {
+        queueMicrotask(() => this._loadLivePage());
+      }
+      if (this._liveKey !== key || !this._livePage) return { songs: [], total: 0, pages: 1, start: 0 };
+      const live = this._livePage;
+      return {
+        songs: live.clips, total: live.total, pages: live.pages,
+        start: (live.page - 1) * SONGS_PER_PAGE,
+      };
+    }
+    const matching = this._visible();
+    const total = matching.length;
+    const pages = Math.max(1, Math.ceil(total / SONGS_PER_PAGE));
+    this._page = Math.min(this._page, pages);
+    const start = (this._page - 1) * SONGS_PER_PAGE;
+    return { songs: matching.slice(start, start + SONGS_PER_PAGE), total, pages, start };
   }
 
   _selectCategory(name, focus) {
@@ -865,8 +1028,10 @@ class SunoGenreCard extends HTMLElement {
   }
 
   _paneStats(name) {
-    const total = (this._clips || []).length || 1;
+    const live = this._livePage?.category_stats;
+    const total = this._livePage?.counts.archive || (this._clips || []).length || 1;
     const songs = clipsInCategory(this._clips, this._genres, name);
+    const tracks = live ? live.tracks : songs.length;
     const pinnedSet = new Set(this._genres.pinned || []);
     const rec = this._categoryRecord(name);
     const children = (rec && rec.cat && rec.cat.children) || [];
@@ -878,12 +1043,13 @@ class SunoGenreCard extends HTMLElement {
     return {
       name,
       songs,
-      tracks: songs.length,
-      pinned: songs.filter((c) => pinnedSet.has(c.id)).length,
-      pct: Math.round((100 * songs.length) / total),
+      tracks,
+      pinned: live ? live.pinned : songs.filter((c) => pinnedSet.has(c.id)).length,
+      mix: live?.mix,
+      pct: Math.round((100 * tracks) / total),
       children,
       meta,
-      splittable: !isParent && !parentName && songs.length >= MIN_SPLIT_SONGS,
+      splittable: !isParent && !parentName && tracks >= MIN_SPLIT_SONGS,
       isParent,
       parentName,
     };
@@ -924,7 +1090,7 @@ class SunoGenreCard extends HTMLElement {
       return;
     }
     if (typing || interactive) return;
-    const ids = this._visible().map((c) => c.id);
+    const ids = this._songPage().songs.map((c) => c.id);
     if (e.key === "/") {
       e.preventDefault();
       const q = this.shadowRoot.querySelector("#q");
@@ -1231,8 +1397,8 @@ class SunoGenreCard extends HTMLElement {
       this._render();
       return;
     }
-    const filtered = this._filtered();
-    if (!filtered.length) {
+    const total = this._livePage?.filter_counts.total ?? this._filtered().length;
+    if (!total) {
       this._aiError = "No songs in the current filter, so there is nothing to send.";
       this._render();
       return;
@@ -1244,7 +1410,7 @@ class SunoGenreCard extends HTMLElement {
     await this._runOp(
       {
         kind: "ask-ai",
-        title: "Asking the AI about " + filtered.length + " song" + (filtered.length === 1 ? "" : "s"),
+        title: "Asking the AI about " + total + " song" + (total === 1 ? "" : "s"),
         step: "packing context",
         unit: "songs",
         cancellable: true,
@@ -1252,7 +1418,7 @@ class SunoGenreCard extends HTMLElement {
         retry: () => this._sendAI(),
       },
       async (op) => {
-        const ctx = await this._contextForAI(filtered);
+        const ctx = await this._contextForAI(await this._contextClips());
         opCheck(op);
         this._ctxForFallback = ctx;
         this._lastCtxNote = summariseContext(ctx);
@@ -1309,7 +1475,13 @@ class SunoGenreCard extends HTMLElement {
       this._render();
       return;
     }
-    const songs = clipsInCategory(this._clips, this._genres, catName);
+    let songs;
+    try {
+      songs = await this._contextClips(catName, "");
+    } catch (_) {
+      this._err = "Could not load the songs for this genre.";
+      return this._render();
+    }
     if (songs.length < MIN_SPLIT_SONGS) {
       this._err =
         "Split needs at least " +
@@ -1600,7 +1772,7 @@ class SunoGenreCard extends HTMLElement {
 
   _paneHtml(stats) {
     const ro = this._readOnly;
-    const mix = classifierMix(stats.songs, this._genres);
+    const mix = stats.mix || classifierMix(stats.songs, this._genres);
     const shares = childShares(this._genres, stats.name);
     const updated = fmtStamp(this._genres.generated_at);
     const reason = splitReason(stats, { readOnly: ro, noAgent: !this._hass });
@@ -1669,7 +1841,7 @@ class SunoGenreCard extends HTMLElement {
       '</span></div><div class="stat"><span class="lbl">% lib</span><span class="val">' + stats.pct + "</span></div></div>" +
       '<div><div class="sec">Classified by</div><div class="mix">' + mixBadges + "</div></div>" +
       '<div><div class="sec">' + (stats.parentName ? "Siblings in " + this._esc(stats.parentName) : "Children") + "</div>" + bar + kids + "</div>" +
-      this._askHtml(this._filtered().length) +
+      this._askHtml(this._livePage?.filter_counts.total ?? this._filtered().length) +
       actions + preview + retry +
       '<div class="keys"><span><span class="kbd">/</span> search</span><span><span class="kbd">Esc</span> close</span>' +
       '<span><span class="kbd">j</span> <span class="kbd">k</span> move</span><span><span class="kbd">Space</span> play</span>' +
@@ -1742,12 +1914,12 @@ class SunoGenreCard extends HTMLElement {
     }
 
     const ro = this._readOnly;
-    const total = (this._clips || []).length;
+    const total = this._livePage?.counts.archive ?? (this._clips || []).length;
     const pinned = new Set(this._genres.pinned || []);
-    const counts = honestCounts(this._genres, this._clips, this._blocked);
-    const visible = this._visible();
+    const counts = this._livePage?.counts || honestCounts(this._genres, this._clips, this._blocked);
+    const page = this._songPage();
     const base = this._filtered();
-    const qc = quickCounts(base, this._genres, this._tracks);
+    const qc = this._livePage?.filter_counts || quickCounts(base, this._genres, this._tracks);
     const paneOpen = this._activeCategory && this._activeCategory !== "All";
     const stats = paneOpen ? this._paneStats(this._activeCategory) : null;
     const subParent = paneOpen ? subtierParent(this._genres, this._activeCategory) : null;
@@ -1787,7 +1959,18 @@ class SunoGenreCard extends HTMLElement {
         ? '<button type="button" class="qf' + (this._qf.audio ? " on" : "") + '" aria-pressed="' + !!this._qf.audio + '" data-qf="audio">Has audio <b>' + qc.audio + "</b></button>"
         : "");
 
-    const list = visible.map((c) => this._cardHtml(c, pinned)).join("");
+    const list = page.songs.map((c) => this._cardHtml(c, pinned)).join("");
+    const range = page.total
+      ? (page.start + 1) + "–" + (page.start + page.songs.length) + " of " + page.total + " songs"
+      : "0 songs";
+    const pager = page.pages > 1
+      ? '<nav class="row" aria-label="Song pages">' +
+        '<button type="button" class="act secondary" data-song-page="prev"' +
+        (this._page <= 1 ? " disabled" : "") + '>Previous</button>' +
+        '<span id="song-page-status" tabindex="-1" role="status">' + range + '</span>' +
+        '<button type="button" class="act secondary" data-song-page="next"' +
+        (this._page >= page.pages ? " disabled" : "") + '>Next</button></nav>'
+      : "";
     const orphanNote =
       counts.orphans > 0
         ? counts.orphans + " classified song" + (counts.orphans === 1 ? " isn't" : "s aren't") + " in the archive list yet"
@@ -1823,7 +2006,8 @@ class SunoGenreCard extends HTMLElement {
       (ro ? ' id="genre-keyboard-region" role="region" tabindex="0" aria-label="Music library keyboard shortcuts: J and K select songs, Space plays, Enter expands, slash searches"' : "") +
       '>' + head +
       (this._loading ? '<div class="note">Loading…</div>' : "") +
-      (this._loadError ? '<div class="err">' + this._esc(this._loadError) + "</div>" : "") +
+      (this._loadError ? '<div class="err">' + this._esc(this._loadError) +
+        (this._usesLiveSongs() ? ' <button type="button" class="act secondary" id="retry-catalogue">Retry</button>' : "") + "</div>" : "") +
       (stats ? "" : this._opHtml()) +
       (this._err ? '<div class="err">' + this._esc(this._err) + "</div>" : "") +
       (this._saveMsg ? '<div class="ok">' + this._esc(this._saveMsg) + "</div>" : "") +
@@ -1833,12 +2017,13 @@ class SunoGenreCard extends HTMLElement {
       '<button type="button" class="more-chips" id="chips-more" aria-controls="top-chips" aria-expanded="' +
       (this._chipsOpen ? "true" : "false") + '" hidden>' + (this._chipsOpen ? "Less \u25b4" : "More \u25be") + "</button>" + sub + "</div>" +
       '<div class="filt"><label class="search">' + SEARCH_SVG +
-      '<input type="search" id="q" placeholder="search title or style…" value="' + this._esc(this._search) +
+      '<input type="search" id="q" maxlength="256" placeholder="search title or style…" value="' + this._esc(this._search) +
       '" aria-label="Search"/><span class="kbd">/</span></label>' +
       '<div class="seg" role="group" aria-label="Sort">' + seg + "</div>" + qf +
-      '<span class="shown">' + visible.length + " song" + (visible.length === 1 ? "" : "s") + "</span></div>" +
-      '<div class="list">' + (list || '<div class="empty">No songs match this filter.</div>') + "</div>" +
-      (paneOpen ? "" : this._askHtml(base.length)) +
+      '<span class="shown">' + page.total + " song" + (page.total === 1 ? "" : "s") + "</span></div>" +
+      pager +
+      '<div class="list">' + (list || (this._loading || this._loadError ? "" : '<div class="empty">No songs match this filter.</div>')) + "</div>" +
+      (paneOpen ? "" : this._askHtml(this._livePage?.filter_counts.total ?? base.length)) +
       "</div>" + (stats ? this._paneHtml(stats) : "") + "</div></div>";
 
     for (const [s, v] of Object.entries(keep)) {
@@ -2024,6 +2209,14 @@ class SunoGenreCard extends HTMLElement {
       this._chipsOpen = !this._chipsOpen;
       return this._render();
     }
+    if ((el = hit("[data-song-page]"))) {
+      if (el.disabled) return;
+      this._page += attr(el, "data-song-page") === "next" ? 1 : -1;
+      this._focusId = null;
+      if (this._usesLiveSongs()) this._focusPage = true;
+      else this._pendingFocus = "#song-page-status";
+      return this._render();
+    }
     if ((el = hit("[data-sort]"))) {
       this._sort = attr(el, "data-sort");
       return this._render();
@@ -2095,6 +2288,8 @@ class SunoGenreCard extends HTMLElement {
   async _onButton(id, el) {
     const cat = this._activeCategory;
     switch (id) {
+      case "retry-catalogue":
+        return this._loadLivePage(true);
       case "sheet-handle":
         if (this._dragHandled) {
           this._dragHandled = false;
@@ -2118,7 +2313,7 @@ class SunoGenreCard extends HTMLElement {
       }
       case "peek-ctx":
       case "copy-context": {
-        const ctx = this._ctxForFallback && this._ctxCat === cat ? this._ctxForFallback : await this._contextForAI(this._filtered());
+        const ctx = this._ctxForFallback && this._ctxCat === cat ? this._ctxForFallback : await this._contextForAI(await this._contextClips());
         if (!ctx.used.length) {
           this._err = "Nothing to copy — no songs in the current filter.";
           return this._render();

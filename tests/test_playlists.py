@@ -404,6 +404,29 @@ def _fake_fetcher(page_loader, html_by_id):
     return _Fake()
 
 
+async def _one_public_song_api(playlist_id, page, **kwargs):
+    return {
+        "id": playlist_id,
+        "current_page": page,
+        "num_total_results": 1,
+        "is_public": True,
+        "is_hidden": False,
+        "is_trashed": False,
+        "playlist_clips": [
+            {
+                "clip": {
+                    "id": _uuid(7),
+                    "title": "Public fixture",
+                    "entity_type": "song_schema",
+                    "is_public": True,
+                    "is_hidden": False,
+                    "is_trashed": False,
+                }
+            }
+        ],
+    }
+
+
 async def test_cli_helper_records_membership_and_checkpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -421,6 +444,7 @@ async def test_cli_helper_records_membership_and_checkpoint(
         return pages.get(page, {})
 
     monkeypatch.setattr("suno_dl.cli.fetch_profile_feed_page", fake_page)
+    monkeypatch.setattr("suno_dl.cli.fetch_public_playlist_api_page", _one_public_song_api)
     monkeypatch.setenv("SUNO_DEFAULT_HANDLE", "drinko")
     cfg = load_config(output_dir=tmp_path)
 
@@ -449,6 +473,7 @@ async def test_cli_helper_dry_run_writes_nothing(
         return pages.get(page, {})
 
     monkeypatch.setattr("suno_dl.cli.fetch_profile_feed_page", fake_page)
+    monkeypatch.setattr("suno_dl.cli.fetch_public_playlist_api_page", _one_public_song_api)
     monkeypatch.setenv("SUNO_DEFAULT_HANDLE", "drinko")
     cfg = load_config(output_dir=tmp_path)
 

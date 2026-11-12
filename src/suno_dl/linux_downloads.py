@@ -7,6 +7,7 @@ Indexed repairs retain the separate offline migration/repair safety gates.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import logging
@@ -23,6 +24,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from .download_failures import ARCHIVED_PREFIX, report_failed_track
 from .fetcher import Fetcher
 from .library import LibraryIndex, record_membership
 from .lossless_mp4 import cover_data_type, write_isolated_mp4
@@ -376,6 +378,8 @@ async def download_additions(**options: Any) -> dict[str, int]:
     for track in active:
         if index.get(track.id) is not None:
             stats["skipped_exists"] += 1
+            if not dry:
+                print(ARCHIVED_PREFIX + track.id.lower(), flush=True)
         else:
             pending.append(track)
     report_capacity(root, pending, covers=options["covers"])
@@ -429,6 +433,8 @@ async def download_additions(**options: Any) -> dict[str, int]:
             urls = track.media_urls
             if options["audio_only"] and not options["extract_audio"]:
                 urls = [u for u in urls if not urlsplit(u).path.lower().endswith(".mp4")]
+            rejected_statuses: set[int] = set()
+            preparation_failed = False
             for url in urls:
                 if pacer is not None:
                     await pacer.wait(track.duration_sec)
@@ -444,6 +450,12 @@ async def download_additions(**options: Any) -> dict[str, int]:
                         if response.status_code == 429:
                             raise RuntimeError("Media server requested backpressure; stop this run")
                         if response.status_code != 200:
+                            rejected_statuses.add(response.status_code)
+                            log.warning(
+                                "Published media returned HTTP %s for clip %s",
+                                response.status_code,
+                                track.id,
+                            )
                             continue
                         size = 0
                         with incoming.open("xb") as stream:
@@ -472,6 +484,7 @@ async def download_additions(**options: Any) -> dict[str, int]:
                     ready = True
                     break
                 except (httpx.HTTPError, OSError, ValueError, subprocess.SubprocessError) as exc:
+                    preparation_failed = True
                     log.warning(
                         "Published media could not be prepared for clip %s (%s)",
                         track.id,
@@ -479,6 +492,18 @@ async def download_additions(**options: Any) -> dict[str, int]:
                     )
                     continue
             if not ready:
+                reasons = []
+                if rejected_statuses:
+                    codes = ", ".join(f"HTTP {code}" for code in sorted(rejected_statuses))
+                    reasons.append(f"Published media returned {codes}.")
+                if preparation_failed:
+                    reasons.append("A media source could not be downloaded or prepared.")
+                if not urls:
+                    reasons.append("Suno published no supported media source.")
+                report_failed_track(track.id, track.title, " ".join(reasons))
+                log.warning(
+                    "Clip %s has no usable supported media source; left missing for retry", track.id
+                )
                 stats["failed"] += 1
                 continue
             members = [(audio, Path(str(base) + ".m4a"))]
@@ -534,6 +559,9 @@ async def download_additions(**options: Any) -> dict[str, int]:
                 with path.open("rb") as synced_member:
                     os.fsync(synced_member.fileno())
             sync_directory(stage)
+            # Let cancellation queued during tagging run before recording the
+            # publication intent. Once recorded, publish and report as one step.
+            await asyncio.sleep(0)
             marker = intents / (track.id + ".json")
             retain = True
             durable_json(
@@ -556,6 +584,7 @@ async def download_additions(**options: Any) -> dict[str, int]:
             publish_prepared(root, marker)
             retain = False
             stats["downloaded"] += 1
+            print(ARCHIVED_PREFIX + track.id.lower(), flush=True)
             stats["tagged"] += 1
             stats["sidecars"] += 1
             total_tracks += 1

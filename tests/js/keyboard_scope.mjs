@@ -13,7 +13,7 @@ card._focusId = "song-1";
 card._activeCategory = "All";
 card._sheet = "peek";
 card._menu = null;
-card._visible = () => [{ id: "song-1" }];
+card._songPage = () => ({ songs: [{ id: "song-1" }] });
 card._narrow = () => false;
 card.getClientRects = () => [{}];
 const effects = [];

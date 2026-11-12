@@ -10,6 +10,7 @@ import pytest
 from mutagen.mp4 import MP4
 
 from suno_dl import downloader, linux_downloads, publication
+from suno_dl.download_failures import parse_failed_track
 from suno_dl.fetcher import Fetcher
 from suno_dl.models import TrackInfo
 from suno_dl.sidecar import build_sidecar
@@ -93,7 +94,7 @@ async def test_public_download_prepares_verified_tags_and_sidecar_before_publica
 
 
 async def test_indexed_recordings_are_unchanged_and_skipped_before_producer_lookup(
-    tmp_path, mock_http
+    tmp_path, mock_http, capsys
 ):
     audio = tmp_path / "drinko_Older.m4a"
     audio.write_bytes(PAYLOAD.read_bytes())
@@ -111,6 +112,12 @@ async def test_indexed_recordings_are_unchanged_and_skipped_before_producer_look
     before = (audio.read_bytes(), side.read_bytes(), audio.stat().st_mtime_ns)
     result, requests = await download(tmp_path, [track, incoming()], mock_http)
     assert result["skipped_exists"] == 1 and result["downloaded"] == 1
+    archived = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("TRACKIE_ARCHIVED ")
+    ]
+    assert archived == [f"TRACKIE_ARCHIVED {OTHER}", f"TRACKIE_ARCHIVED {incoming().id}"]
     assert not any(u == "https://suno.com/song/" + OTHER for u in requests)
     assert (audio.read_bytes(), side.read_bytes(), audio.stat().st_mtime_ns) == before
     assert len(list(tmp_path.glob("*.m4a"))) == 2
@@ -316,3 +323,29 @@ async def test_special_staging_artifact_fails_without_opening_it(tmp_path, mock_
     with pytest.raises(ValueError, match="Unrecorded private staging"):
         await download(tmp_path, [incoming()], mock_http)
     assert not list(tmp_path.glob("*.m4a"))
+
+
+async def test_failed_public_transfer_reports_verified_title_and_status(
+    tmp_path, mock_http, capsys
+):
+    def handler(request):
+        if request.url.host == "suno.com":
+            return httpx.Response(200, text=page(title="Verified title"))
+        return httpx.Response(403)
+
+    mock_http(handler)
+    async with Fetcher(10, 0) as fetcher:
+        result = await downloader.download_tracks(
+            [incoming()], fetcher, 1, tmp_path, "{artist}_{title}", "owner", min_free_mb=0
+        )
+    assert result["failed"] == 1 and result["downloaded"] == 0
+    assert [
+        v for line in capsys.readouterr().out.splitlines() if (v := parse_failed_track(line))
+    ] == [
+        {
+            "id": ID,
+            "url": f"https://suno.com/song/{ID}",
+            "title": "Verified title",
+            "reason": "Published media returned HTTP 403.",
+        }
+    ]

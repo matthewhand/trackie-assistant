@@ -1,6 +1,6 @@
 [project]
 name = "trackie-assistant"
-version = "1.6.2rc2"
+version = "1.6.2rc16"
 description = "Trackie Assistant: archive public Suno music from profiles, playlists or songs"
 readme = "README.md"
 requires-python = ">=3.13"

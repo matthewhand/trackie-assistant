@@ -29,6 +29,7 @@ No new runtime dependencies: stdlib ``http.server`` + ``subprocess`` only.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import binascii
 import contextlib
@@ -41,6 +42,7 @@ import os
 import re
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -51,6 +53,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import click
@@ -58,7 +61,17 @@ from dotenv import load_dotenv
 
 from . import __version__
 from .archive_lock import raise_if_unsupported_archive_write
-from .blocklist import load_blocked_ids
+from .blocklist import load_blocked_ids, read_blocklist_editor, save_blocklist_editor
+from .download_failures import (
+    ARCHIVED_PREFIX,
+    MAX_FAILURES,
+    RETRY_PREFIX,
+    FailureHistory,
+    RetryResult,
+    legacy_failed_tracks,
+    parse_failed_track,
+    validate_failure,
+)
 from .download_intent import WindowsArchiveWriteUnavailable
 from .linux_downloads import require_audio_sync
 from .media_process import run as run_media_process
@@ -73,8 +86,12 @@ from .opstatus import (
     redact,
 )
 from .producer_lookup import ProducerLookupError, _require_trusted_framing
+from .schedule import Scheduler
+from .song_catalogue import SongCatalogue
+from .song_link import resolve_song_link
 from .sync_capacity import destination_space, latest_capacity
 from .tagging import TaggingUnavailable
+from .urls import UUID_RE, song_page_url
 
 __all__ = ["webui_cli"]
 
@@ -211,9 +228,15 @@ class Run:
     finished: float | None = None
     returncode: int | None = None
     output: list[str] = field(default_factory=list)
+    failed_tracks: dict[str, dict[str, str]] = field(default_factory=dict)
     request_id: str = field(default_factory=new_request_id)
     cancel_requested: bool = False
     process: subprocess.Popen[str] | None = field(default=None, repr=False)
+    retry_ids: tuple[str, ...] = ()
+    archived_tracks: set[str] = field(default_factory=set)
+    retry_titles: dict[str, str] = field(default_factory=dict)
+    retry_current: str = ""
+    retry_outcomes: dict[str, str] = field(default_factory=dict)
 
     @property
     def state(self) -> str:
@@ -222,6 +245,16 @@ class Run:
         if self.cancel_requested:
             return "cancelled"
         return "done" if self.returncode == 0 else "failed"
+
+    def retry_counts(self) -> dict[str, int]:
+        outcomes = self.retry_outcomes.copy()
+        return {
+            "done": len(outcomes),
+            "total": len(self.retry_ids),
+            "recovered": sum(state == "recovered" for state in outcomes.values()),
+            "failed": sum(state == "failed" for state in outcomes.values()),
+            "skipped": sum(state == "skipped" for state in outcomes.values()),
+        }
 
     def snapshot(self) -> dict[str, object]:
         snap: dict[str, object] = {
@@ -235,8 +268,19 @@ class Run:
             "request_id": self.request_id,
             "progress": parse_progress(self.output),
             "capacity": latest_capacity(self.output),
+            "failed_tracks": list(self.failed_tracks.copy().values()),
             "error": None,
         }
+        if self.retry_ids:
+            snap["retry_ids"] = list(self.retry_ids)
+            snap["archived_tracks"] = sorted(self.archived_tracks.copy())
+        if self.retry_titles:
+            current = self.retry_current if self.returncode is None else ""
+            snap["retry_progress"] = {
+                "title": self.retry_titles[current] if current else None,
+                "position": self.retry_ids.index(current) + 1 if current else None,
+                **self.retry_counts(),
+            }
         if self.state in ("failed", "cancelled"):
             snap["error"] = error_body(
                 classify_run_failure(self.returncode, self.output, cancelled=self.cancel_requested),
@@ -250,6 +294,7 @@ class RunManager:
 
     def __init__(self, archive: Path) -> None:
         self.archive = archive
+        self.failures = FailureHistory(archive)
         self._lock = threading.Lock()
         self._runs: list[Run] = []
 
@@ -259,11 +304,24 @@ class RunManager:
         # and list-iteration is GIL-atomic enough for a best-effort check.
         return any(run.returncode is None for run in self._runs)
 
-    def start(self, kind: str, cmd: list[str]) -> tuple[Run, None] | tuple[None, str]:
+    def start(
+        self,
+        kind: str,
+        cmd: list[str],
+        *,
+        retry_ids: tuple[str, ...] = (),
+        retry_titles: dict[str, str] | None = None,
+    ) -> tuple[Run, None] | tuple[None, str]:
         with self._lock:
             if any(run.returncode is None for run in self._runs):
                 return None, "another run is already active (one at a time)"
-            run = Run(id=uuid.uuid4().hex[:8], kind=kind, cmd=cmd)
+            run = Run(
+                id=uuid.uuid4().hex[:8],
+                kind=kind,
+                cmd=cmd,
+                retry_ids=retry_ids,
+                retry_titles=retry_titles or {},
+            )
             self._runs.append(run)
             del self._runs[:-_MAX_STORED_RUNS]
         thread = threading.Thread(target=self._execute, args=(run,), daemon=True)
@@ -282,8 +340,7 @@ class RunManager:
         except OSError as exc:
             run.output.append(f"failed to start: {exc}")
             logger.error("[%s] run %s failed to start: %s", run.request_id, run.kind, redact(exc))
-            run.returncode = -1
-            run.finished = time.time()
+            self._finish(run, -1)
             return
         # Register the process atomically with cancel(). If Cancel arrived while
         # Popen was still starting, honour it as soon as the handle exists.
@@ -298,14 +355,59 @@ class RunManager:
                 logger.warning("[%s] terminate failed: %s", run.request_id, redact(exc))
         if process.stdout is None:  # pragma: no cover - PIPE guarantees a stream
             run.output.append("subprocess produced no output stream")
-            run.returncode = -1
-            run.finished = time.time()
+            self._finish(run, -1)
             return
+        history_error = False
         for line in process.stdout:
+            if line.startswith(RETRY_PREFIX):
+                clip, _, state = line.removeprefix(RETRY_PREFIX).strip().partition(" ")
+                if clip in run.retry_titles:
+                    with self._lock:
+                        if clip not in run.retry_outcomes:
+                            if state == "working":
+                                run.retry_current = clip
+                            elif state in ("failed", "skipped"):
+                                run.retry_outcomes[clip] = state
+                                run.retry_current = ""
+                continue
+            if line.startswith(ARCHIVED_PREFIX):
+                clip_id = line.removeprefix(ARCHIVED_PREFIX).strip()
+                if UUID_RE.fullmatch(clip_id) and (run.kind == "sync" or clip_id in run.retry_ids):
+                    try:
+                        self.failures.resolve(clip_id)
+                    except sqlite3.Error as exc:
+                        logger.error(
+                            "[%s] Cannot update failure history: %s", run.request_id, redact(exc)
+                        )
+                        history_error = True
+                    if clip_id in run.retry_ids:
+                        with self._lock:
+                            run.archived_tracks.add(clip_id)
+                            if clip_id in run.retry_titles:
+                                run.retry_outcomes[clip_id] = "recovered"
+                                run.retry_current = ""
+                continue
+            failure = parse_failed_track(line)
+            if failure is not None:
+                clip_id = failure["id"]
+                if run.kind == "sync" or clip_id in run.retry_ids:
+                    try:
+                        self.failures.record(failure)
+                    except sqlite3.Error as exc:
+                        logger.error(
+                            "[%s] Cannot save failure history: %s", run.request_id, redact(exc)
+                        )
+                        history_error = True
+                run.failed_tracks[clip_id] = failure
+                if len(run.failed_tracks) > MAX_FAILURES:
+                    del run.failed_tracks[next(iter(run.failed_tracks))]
+                continue
             run.output.append(line.rstrip("\n"))
             del run.output[:-_MAX_RUN_OUTPUT_LINES]
-        run.returncode = process.wait()
-        run.finished = time.time()
+        returncode = process.wait()
+        if history_error:
+            run.output.append("Trackie could not save all failure history updates.")
+        self._finish(run, returncode or int(history_error))
         if run.returncode not in (0, None) and not run.cancel_requested:
             logger.error(
                 "[%s] run %s exited %s; last output: %s",
@@ -314,6 +416,29 @@ class RunManager:
                 run.returncode,
                 redact(" | ".join(run.output[-6:])),
             )
+
+    def _finish(self, run: Run, returncode: int) -> None:
+        finished = time.time()
+        with self._lock:
+            if run.retry_titles:
+                counts = run.retry_counts()
+                unfinished = counts["total"] - counts["done"]
+                result = RetryResult(
+                    finished=finished,
+                    recovered=counts["recovered"],
+                    failed=counts["failed"],
+                    skipped=counts["skipped"],
+                    unfinished=unfinished,
+                    stopped=bool(returncode or run.cancel_requested or unfinished),
+                )
+                try:
+                    self.failures.save_retry_result(result)
+                except sqlite3.Error as exc:
+                    logger.error("[%s] Cannot save retry result: %s", run.request_id, redact(exc))
+                    run.output.append("Trackie could not save the retry result.")
+                    returncode = returncode or 1
+            run.finished = finished
+            run.returncode = returncode
 
     def cancel(self, run_id: str) -> tuple[Run | None, ApiError | None]:
         """Ask a running subprocess to stop (SIGTERM / terminate)."""
@@ -351,7 +476,18 @@ def _sync_command(
     sources: tuple[str, ...] = (),
 ) -> list[str]:
     """Build WebUI sync argv, with HA ingress unable to retain MP4."""
-    cmd = [sys.executable, "-u", "-m", "suno_dl.cli", "--sync"]
+    cmd = [
+        sys.executable,
+        "-u",
+        "-m",
+        "suno_dl.cli",
+        "--sync",
+        "--playlists",
+        "--no-rotate",
+        "--concurrency",
+        "1",
+        "--playback-paced",
+    ]
     cmd.append("--extract-audio" if extract_audio else "--no-extract-audio")
     cmd.append("--videos" if videos else "--no-videos")
     if videos and keep_video:
@@ -370,6 +506,10 @@ def _recommend_command(candidates: list[str], taste: bool, archive: Path) -> lis
     if taste:
         cmd += ["--taste-from", str(archive)]
     return cmd
+
+
+def _blocklist_path(archive: Path) -> Path:
+    return archive / Path(os.environ.get("SUNO_BLOCKED_FILE", ".blocked"))
 
 
 def _compute_status(archive: Path, env: dict[str, str] | None = None) -> dict[str, object]:
@@ -393,7 +533,7 @@ def _compute_status(archive: Path, env: dict[str, str] | None = None) -> dict[st
             profiles.append(
                 {"name": child.name, "tracks": len(files), "size_mb": round(size_mb, 1)}
             )
-    blocked_ids = load_blocked_ids(archive / ".blocked")
+    blocked_ids = load_blocked_ids(_blocklist_path(archive))
     watch = [w.strip() for w in environ.get("SUNO_WATCH", "").split(",") if w.strip()]
     engine = (
         "JEV configured"
@@ -583,7 +723,7 @@ def _read_json_file(path: Path) -> object | None:
 def _blocked_count(archive: Path) -> int | None:
     """How many clips .blocked lists; None if the file is malformed."""
     try:
-        return len(load_blocked_ids(archive / ".blocked"))
+        return len(load_blocked_ids(_blocklist_path(archive)))
     except Exception:  # noqa: BLE001 - a bad blocklist must not break browsing
         return None
 
@@ -827,6 +967,8 @@ _STATIC_FILES = frozenset(
         "suno-genre-card.js",
         "suno-genre-core.js",
         "suno-view-modes.js",
+        "suno-schedule.js",
+        "suno-blocked.js",
         "trackie-dacks.svg",
         "trackie-assistant-logo.webp",
     }
@@ -1043,7 +1185,7 @@ suno-genre-card{--sg-theme-surface:var(--ui-surface);--sg-theme-raised:var(--ui-
 @media(prefers-reduced-motion:reduce){.op .spin{animation:none;border-top-color:currentColor}
  .op .bar i{transition:none}}
 </style>
-<script type="module" src="static/suno-genre-card.js?v=9"></script>
+<script type="module" src="static/suno-genre-card.js?v=10"></script>
 </head><body data-view="classic" data-theme="system" data-density="comfortable">
 <header class="top">
  <div class="brand"><span class="brand-mark" aria-hidden="true"><img
@@ -1108,6 +1250,60 @@ suno-genre-card{--sg-theme-surface:var(--ui-surface);--sg-theme-raised:var(--ui-
     <button class="act secondary" id="sync-unlock" type="button">
       I reviewed Activity — enable actions</button>
   </p>
+  <p id="retry-summary" class="note" role="status" hidden></p>
+  <section id="failed-downloads" hidden>
+   <h3>Failed downloads</h3>
+   <button class="act secondary" id="retry-all" type="button" hidden disabled>
+    Retry all failed tracks
+   </button>
+   <ul id="failed-track-entries"></ul>
+  </section>
+  <details id="skip-list" open style="margin-top:1rem">
+   <summary>Skipped tracks <span id="skip-count"></span></summary>
+   <ul id="skip-entries"></ul>
+   <p id="skip-status" class="note" role="status"></p>
+   <button id="skip-edit" class="act secondary" type="button" disabled>Edit skip list</button>
+   <form id="skip-editor" hidden>
+    <p class="note">Paste a Suno Share link or song page link to fill in the title. Removing a track
+     allows another download attempt. Edits apply when you save.</p>
+    <div id="skip-rows"></div>
+    <div class="actions">
+     <button id="skip-add" class="act secondary" type="button">Add track</button>
+     <button id="skip-save" class="act" type="submit">Save skip list</button>
+     <button id="skip-cancel" class="act secondary" type="button">Cancel</button>
+    </div>
+   </form>
+   <template id="skip-row-template">
+    <fieldset style="min-width:0;margin:.5rem 0;border:1px solid var(--border)">
+     <legend>Skipped track</legend>
+     <label>Suno link
+      <input type="url" name="url" required placeholder="https://suno.com/song/…"
+       style="width:100%;box-sizing:border-box"></label>
+     <label>Title
+      <input type="text" name="title" style="width:100%;box-sizing:border-box"></label>
+     <label>Reason
+      <input type="text" name="reason" style="width:100%;box-sizing:border-box"></label>
+     <p class="note" role="status" data-lookup-status></p>
+     <button class="act secondary" type="button">Remove track</button>
+    </fieldset>
+   </template>
+  </details>
+  <div id="automatic-sync" hidden
+    style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">
+   <h3>Automatic syncing</h3>
+   <label><input id="schedule-enabled" type="checkbox"> Check for new music automatically</label>
+   <label for="schedule-interval">Check every (hours)</label>
+   <input id="schedule-interval" type="number" min="0.25" max="24" step="0.25" value="6">
+   <label for="schedule-sources">Scheduled profiles or playlists (one per line)</label>
+   <textarea id="schedule-sources" rows="3" style="width:100%;box-sizing:border-box"></textarea>
+   <p class="note">Profiles are checked for newly added public playlists every run.
+    Existing recordings are reused by clip ID; files and artist tags are not changed or removed.
+    Audio and cover images are saved, with downloads paced at playback speed.</p>
+   <button id="schedule-save" class="act secondary" type="button">Save schedule</button>
+   <p id="schedule-status" class="note" role="status" aria-live="polite"></p>
+   <p class="note">Pausing stops future checks. An active sync finishes normally.
+    Use “Download missing tracks” above for an immediate check on this same backend.</p>
+  </div>
  </section>
  <section id="panel-recommend" data-panel="recommend" tabindex="-1" class="card recommend-panel">
   <h2>Recommend</h2>
@@ -1122,10 +1318,12 @@ suno-genre-card{--sg-theme-surface:var(--ui-surface);--sg-theme-raised:var(--ui-
 </div>
 </main>
 <script type="module" src="static/suno-view-modes.js?v=1"></script>
+<script type="module" src="static/suno-schedule.js?v=1"></script>
+<script type="module" src="static/suno-blocked.js?v=7"></script>
 <script type="module">
 await customElements.whenDefined('suno-genre-card');
 document.getElementById('lib').setConfig({standalone:true,title:'Suno archive',
-  library_url:'api/library',tracks_url:'api/tracks',lyrics_url:'api/lyrics',
+  songs_url:'api/songs',lyrics_url:'api/lyrics',
   client_error_url:'api/client-error'});
 </script>
 <script>
@@ -1139,14 +1337,21 @@ async function j(url,opts){
     request_id:'',time:new Date().toISOString()}};}}
 var shown=null,dismissed={},lastReq=null;
 var refreshSeq=0,appliedSeq=0,pollHealth='initial';
-var submitting=false,awaitingRun=null,uncertainReal=false;
+var submitting=false,awaitingRun=null,uncertainReal=false,runBusy=false;
 const uncertainKey='suno.webui.real-operation-uncertain.v1';
 try{uncertainReal=sessionStorage.getItem(uncertainKey)==='1';}catch(_){}
-function actionLocks(busy=false){
+function actionLocks(busy=runBusy){
+  runBusy=busy;
+  const locked=busy||submitting||!!awaitingRun||uncertainReal;
   for(const id of ['sync-dry','sync-real','rec']){
     const button=document.getElementById(id);
-    if(button)button.disabled=busy||submitting||!!awaitingRun||uncertainReal;
+    if(button)button.disabled=locked;
   }
+  const failures=document.getElementById('failed-track-entries');
+  const retryLocked=locked||pollHealth!=='online';
+  failures.dataset.retryLocked=String(retryLocked);
+  document.getElementById('retry-all').disabled=retryLocked;
+  for(const button of failures.querySelectorAll('[data-retry-track]'))button.disabled=retryLocked;
   const note=document.getElementById('sync-uncertain');
   if(note)note.hidden=!uncertainReal;
 }
@@ -1175,6 +1380,7 @@ function pollAnnouncement(healthy){
 function markRunStale(){
   if(shown&&shown.kind==='running'&&!shown.stale)setBar({...shown,stale:true});
   pollAnnouncement(false);
+  actionLocks();
   setConnection("offline");
 }
 function opHtml(o){
@@ -1348,15 +1554,35 @@ async function refresh(){
     el.textContent='no runs yet';
   }
   const runs=r.body.runs;
+  const failures=r.body.failed_tracks||[];
+  document.dispatchEvent(new CustomEvent('trackie-sync-failures', {detail:{
+    failures, blocked:s.body.blocked.ids||[]
+  }}));
+  const result=r.body.last_retry_result;
+  const summary=document.getElementById('retry-summary');
+  summary.hidden=!result;
+  if(result){
+    const time=new Date(result.finished*1000).toLocaleString();
+    const status=result.stopped?'Last Retry all stopped':'Last Retry all finished';
+    const message=status+' '+time+' · '+result.recovered+' recovered · '
+      +result.failed+' still failed · '+result.skipped+' skipped'
+      +(result.unfinished?' · '+result.unfinished+' unfinished':'');
+    if(summary.textContent!==message)summary.textContent=message;
+  }
   const active=runs.find(x=>x.state==='running'||x.state==='cancelling');
   const busy=!!active;
   renderCapacity(s.body.storage,active||runs.find(x=>x.kind==='sync'||x.kind==='sync (dry-run)'));
   if(awaitingRun&&runs.some(x=>x.id===awaitingRun))awaitingRun=null;
   actionLocks(busy);
   if(active){
-    const p=active.progress;
+    const batch=active.retry_progress;
+    const p=batch||active.progress;
     let line=active.kind+(active.state==='cancelling'?' - cancelling...':' - running...');
-    if(p&&p.total)line+=' '+p.done+' of '+p.total;
+    if(batch){
+      const position=(batch.position||batch.done)+' of '+batch.total;
+      line='Retry all · '+position+(batch.title?' · '+batch.title:' finished');
+      if(active.state==='cancelling')line+=' · cancelling…';
+    }else if(p&&p.total)line+=' '+p.done+' of '+p.total;
     else if(p&&p.label)line+=' '+p.label;
     setBar({kind:'running',runId:active.id,line:line,progress:p,cancellable:true,
       cancelling:active.state==='cancelling'});
@@ -1371,13 +1597,17 @@ async function refresh(){
           :'The run stopped with exit code '+last.returncode+'.')});}
 }
 async function post(url,data){
-  if(submitting||awaitingRun||uncertainReal)return;
+  if(submitting||awaitingRun||uncertainReal||runBusy)return;
   const real=url==='api/sync'&&data.dry_run==='0';
-  if(real&&!window.confirm('REAL DOWNLOAD: this writes files to the archive output folder. '
-    +'Start now?'))return;
+  const retry=data.retry_track||data.retry_failed;
+  if(retry&&pollHealth!=='online')return;
+  if(real&&!retry&&!window.confirm(
+    'REAL DOWNLOAD: this writes files to the archive output folder. Start now?'))return;
   // Lock before awaiting any network call; a double tap can start only once.
   submitting=true;actionLocks();
-  const title=real?'Real download':data.dry_run==='1'?'Sync preview':'Recommend';
+  const title=data.retry_failed?'Retry failed tracks':data.retry_track?'Retry track':
+    real?'Real download':
+    data.dry_run==='1'?'Sync preview':'Recommend';
   try{
     const r=await j(url,{method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
@@ -1420,6 +1650,13 @@ function syncOpts(dry){
     covers:document.getElementById('covers').checked?'1':'0'};}
 document.getElementById('sync-dry').onclick=()=>post('api/sync',syncOpts('1'));
 document.getElementById('sync-real').onclick=()=>post('api/sync',syncOpts('0'));
+document.getElementById('retry-all').onclick=event=>
+  post('api/sync',{...syncOpts('0'),sources:'',retry_failed:'1',
+    retry_count:event.currentTarget.dataset.count});
+document.getElementById('failed-track-entries').onclick=event=>{
+  const clip=event.target.closest('[data-retry-track]')?.dataset.retryTrack;
+  if(clip)post('api/sync',{...syncOpts('0'),sources:'',retry_track:clip});
+};
 document.getElementById('rec').onclick=()=>post('api/recommend',{candidates:document.getElementById('cands').value,taste:document.getElementById('taste').checked?'1':'0'});
 document.getElementById('sync-unlock').onclick=()=>{
   if(!uncertainReal||pollHealth!=='online')return;
@@ -1444,6 +1681,7 @@ def _make_handler(
     tracks: TrackIndex | None = None,
     trusted_ingress_peer: str | None = None,
     auth: GatewayAuth | None = None,
+    scheduler: Scheduler | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     gateway_auth = auth if auth is not None else GatewayAuth()
     # Resolve the fixed HA Supervisor service through Docker DNS. If DNS is
@@ -1452,6 +1690,25 @@ def _make_handler(
     if ingress_mode and trusted_ingress_peer is None:
         trusted_ingress_peer = socket.gethostbyname("supervisor")
     track_index = tracks if tracks is not None else TrackIndex(archive, genres_dir)
+    catalogue = SongCatalogue(
+        _downloads_root(archive), genres_dir, os.getenv("SUNO_GENRES_URL", "")
+    )
+    song_lookup_lock = threading.Lock()
+    last = scheduler.snapshot().get("last_run") if scheduler else None
+    if last:
+        records = last.get("failed_tracks")
+        if not isinstance(records, list):
+            records = legacy_failed_tracks(last.get("output", []))
+        manager.failures.seed([row for record in records if (row := validate_failure(record))])
+
+    def recent_runs() -> list[dict[str, Any]]:
+        runs: list[dict[str, Any]] = manager.list()
+        last = scheduler.snapshot().get("last_run") if scheduler else None
+        if last and not any(run["id"] == last["id"] for run in runs):
+            if "failed_tracks" not in last:
+                last = {**last, "failed_tracks": legacy_failed_tracks(last.get("output", []))}
+            runs.append(last)
+        return runs
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: object) -> None:  # noqa: A002
@@ -1490,6 +1747,12 @@ def _make_handler(
         def _media(self, media: Path) -> None:
             size = media.stat().st_size
             ctype, _enc = mimetypes.guess_type(media.name)
+            # Minimal container images may not ship an OS MIME registry.
+            ctype = {
+                ".m4a": "audio/mp4",
+                ".mp3": "audio/mpeg",
+                ".wav": "audio/wav",
+            }.get(media.suffix.lower(), ctype)
             rng = _parse_range(self.headers.get("Range"), size)
             if rng == (-1, -1):
                 self.send_response(416)
@@ -1607,10 +1870,67 @@ def _make_handler(
                 self.wfile.write(page)
             elif path == "/api/status":
                 self._json(200, _compute_status(archive))
+            elif path == "/api/blocked":
+                from .errors import ConfigError
+
+                try:
+                    value = read_blocklist_editor(_blocklist_path(archive))
+                except (ConfigError, OSError, UnicodeError):
+                    self._json(422, {"error": "The skip list could not be read. Check its format."})
+                else:
+                    self._json(200, value)
+            elif path == "/api/schedule":
+                self._json(200, scheduler.snapshot() if scheduler else {"available": False})
             elif path == "/api/runs":
-                self._json(200, {"runs": manager.list()})
+                runs = recent_runs()
+                self._json(
+                    200,
+                    {
+                        "runs": runs,
+                        "failed_tracks": manager.failures.list(),
+                        "last_retry_result": manager.failures.last_retry_result(),
+                    },
+                )
             elif path == "/api/library":
                 self._json(200, _library_payload(genres_dir, archive))
+            elif path == "/api/songs":
+                query = parse_qs(urlparse(self.path).query)
+                raw_page = query.get("page", ["1"])[0]
+                sort = query.get("sort", ["newest"])[0]
+                search = query.get("search", [""])[0]
+                category = query.get("category", ["All"])[0]
+                if (
+                    not re.fullmatch(r"[1-9][0-9]{0,5}", raw_page)
+                    or sort not in {"newest", "az", "bpm"}
+                    or len(search) > 256
+                    or len(category) > 256
+                    or any(
+                        query.get(key, ["0"]) not in (["0"], ["1"])
+                        for key in ("pinned", "unsorted", "audio")
+                    )
+                ):
+                    self._json(400, {"error": "Invalid song page or filter."})
+                    return
+                self._json(
+                    200,
+                    catalogue.page(
+                        page=int(raw_page),
+                        search=search,
+                        category=category,
+                        sort=sort,
+                        pinned=query.get("pinned") == ["1"],
+                        unsorted=query.get("unsorted") == ["1"],
+                        audio=query.get("audio") == ["1"],
+                        blocked=_blocked_count(archive),
+                        refresh=query.get("refresh") == ["1"],
+                    ),
+                )
+            elif match := re.fullmatch(rf"/api/songs/({UUID_RE.pattern})/audio", path, re.I):
+                media = catalogue.audio(match[1])
+                if media is None:
+                    self._json(404, {"error": "Audio not found."})
+                else:
+                    self._media(media)
             elif path == "/api/tracks":
                 self._json(200, track_index.payload())
             elif path == "/api/lyrics":
@@ -1727,7 +2047,59 @@ def _make_handler(
             except UnicodeDecodeError:
                 self._json(400, {"error": "invalid request encoding"})
                 return
-            if path == "/api/sync":
+            if path == "/api/schedule":
+                if scheduler is None:
+                    self._json(503, {"error": "Scheduling is not enabled on this backend"})
+                    return
+                if self.headers.get("Content-Type", "").split(";", 1)[0] != "application/json":
+                    self._json(415, {"error": "Schedule requires JSON"})
+                    return
+                try:
+                    value = json.loads(raw_body)
+                    saved = scheduler.save(value)
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                    return
+                self._json(200, saved)
+            elif path == "/api/blocked":
+                from .errors import ConfigError
+
+                if self.headers.get("Content-Type", "").split(";", 1)[0] != "application/json":
+                    self._json(415, {"error": "Skip list edits require JSON"})
+                    return
+                try:
+                    value = json.loads(raw_body)
+                    if isinstance(value, dict) and set(value) == {"lookup"}:
+                        if not isinstance(value["lookup"], str):
+                            raise ValueError("Paste a Suno song or Share link.")
+                        if not song_lookup_lock.acquire(blocking=False):
+                            self._json(
+                                429, {"error": "Another title lookup is running. Try again."}
+                            )
+                            return
+                        try:
+                            song = asyncio.run(resolve_song_link(value["lookup"]))
+                        finally:
+                            song_lookup_lock.release()
+                        self._json(200, song)
+                        return
+                    if not isinstance(value, dict) or not all(
+                        isinstance(value.get(key), str) for key in ("text", "revision")
+                    ):
+                        raise ValueError("Expected skip list text and revision")
+                    saved_blocklist = save_blocklist_editor(
+                        _blocklist_path(archive), value["text"], value["revision"]
+                    )
+                except (ConfigError, ValueError) as exc:
+                    self._json(400, {"error": str(exc)})
+                except OSError:
+                    self._json(500, {"error": "Could not save the skip list"})
+                else:
+                    if saved_blocklist is None:
+                        self._json(409, {"error": "Skip list changed. Reload before saving."})
+                    else:
+                        self._json(200, saved_blocklist)
+            elif path == "/api/sync":
                 content_type = (
                     (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
                 )
@@ -1760,6 +2132,59 @@ def _make_handler(
                         400, {"error": "Enter public Suno playlist URLs or @profiles, one per line"}
                     )
                     return
+                retry_ids: tuple[str, ...] = ()
+                retry_kind = ""
+                retry_titles: dict[str, str] = {}
+                single = form.get("retry_track")
+                bulk = form.get("retry_failed")
+                if single is not None or bulk is not None:
+                    if (
+                        dry
+                        or sources
+                        or form.get("videos") == ["1"]
+                        or (
+                            single is not None
+                            and (
+                                bulk is not None
+                                or len(single) != 1
+                                or not UUID_RE.fullmatch(single[0])
+                            )
+                        )
+                        or (bulk is not None and bulk != ["1"])
+                    ):
+                        self._json(400, {"error": "Retry only failed Suno audio tracks."})
+                        return
+                    blocked = load_blocked_ids(_blocklist_path(archive))
+                    if single is not None:
+                        clip_id = single[0].lower()
+                        if clip_id in blocked:
+                            self._json(
+                                409, {"error": "Remove this track from the skip list to retry it."}
+                            )
+                            return
+                        retry_ids = (clip_id,)
+                        retry_kind = "retry track"
+                    else:
+                        retry_titles = {
+                            track["id"]: track["title"] or "Suno track"
+                            for track in manager.failures.list()
+                            if track["id"] not in blocked
+                        }
+                        retry_ids = tuple(retry_titles)
+                        retry_kind = "retry failed tracks"
+                    if bulk is not None and form.get("retry_count", [str(len(retry_ids))]) != [
+                        str(len(retry_ids))
+                    ]:
+                        self._json(
+                            409, {"error": "The retry count changed. Review the updated list."}
+                        )
+                        return
+                    if not retry_ids:
+                        self._json(409, {"error": "No failed tracks are available to retry."})
+                        return
+                    sources = tuple(song_page_url(clip) for clip in retry_ids)
+                elif not sources and scheduler:
+                    sources = tuple(scheduler.snapshot()["sources"])
                 if not dry:
                     try:
                         raise_if_unsupported_archive_write()
@@ -1795,18 +2220,20 @@ def _make_handler(
                         return
                 videos = form.get("videos", ["0"])[0] == "1"
                 covers = form.get("covers", ["1"])[0] == "1"
-                kind = "sync (dry-run)" if dry else "sync"
-                run, error = manager.start(
-                    kind,
-                    _sync_command(
-                        dry,
-                        videos=videos,
-                        covers=covers,
-                        keep_video=not ingress_mode,
-                        extract_audio=form.get("extract_audio", ["1"])[0] == "1",
-                        sources=sources,
-                    ),
+                command = _sync_command(
+                    dry,
+                    videos=videos,
+                    covers=covers,
+                    keep_video=not ingress_mode,
+                    extract_audio=form.get("extract_audio", ["1"])[0] == "1",
+                    sources=sources,
                 )
+                if retry_ids:
+                    run, error = manager.start(
+                        retry_kind, command, retry_ids=retry_ids, retry_titles=retry_titles
+                    )
+                else:
+                    run, error = manager.start("sync (dry-run)" if dry else "sync", command)
                 if run is None:
                     self._fail(
                         ApiError(
@@ -1902,6 +2329,9 @@ def _make_handler(
     help="Origin allowed to read /api/tracks, /api/library and /api/lyrics cross-site "
     "(e.g. https://ha.example.lan:8123). Repeatable; default none.",
 )
+@click.option(
+    "--scheduler", is_flag=True, help="Enable persistent, editable Linux sync scheduling."
+)
 def webui_cli(
     port: int,
     host_opt: str,
@@ -1909,6 +2339,7 @@ def webui_cli(
     ingress: bool,
     genres_dir: Path | None,
     cors_origin: tuple[str, ...] = (),
+    scheduler: bool = False,
 ) -> None:
     """Serve a local dashboard for driving suno-dl."""
     archive = archive.expanduser().resolve()
@@ -1917,7 +2348,18 @@ def webui_cli(
             f"no .env in {archive}; run suno-webui from your archive directory "
             "or pass --archive (the same directory you run suno-dl --sync from)."
         )
+    load_dotenv(archive / ".env", override=False)
     manager = RunManager(archive)
+    schedule = None
+    if scheduler:
+        if not sys.platform.startswith("linux"):
+            raise click.ClickException("Scheduled syncing currently requires Linux")
+        schedule = Scheduler(
+            archive,
+            manager,
+            lambda entries: _sync_command(False, sources=entries),
+            [w.strip() for w in os.environ.get("SUNO_WATCH", "").split(",") if w.strip()],
+        )
     # Explicit archive configuration takes precedence over an unrelated cwd.
     # Preserve environment variables deliberately provided by the operator.
     load_dotenv(archive / ".env", override=False)
@@ -1929,6 +2371,8 @@ def webui_cli(
     try:
         gateway_auth = GatewayAuth.from_env()
     except ValueError as exc:
+        if schedule:
+            schedule.close()
         raise click.ClickException(str(exc)) from exc
     try:
         server = ThreadingHTTPServer(
@@ -1942,9 +2386,12 @@ def webui_cli(
                 cors_origins=frozenset(o.rstrip("/") for o in cors_origin),
                 tracks=track_index,
                 auth=gateway_auth,
+                scheduler=schedule,
             ),
         )
     except OSError as exc:
+        if schedule:
+            schedule.close()
         raise click.ClickException(
             f"cannot bind {host_opt}:{port} ({exc}); try another --port"
         ) from exc
@@ -1968,10 +2415,16 @@ def webui_cli(
         )
     else:
         click.echo(f"Trackie Assistant dashboard: http://127.0.0.1:{bound}/  (Ctrl-C to stop)")
+    if schedule:
+        schedule.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         click.echo("\nbye")
+    finally:
+        if schedule:
+            schedule.close()
+        server.server_close()
 
 
 if __name__ == "__main__":  # pragma: no cover

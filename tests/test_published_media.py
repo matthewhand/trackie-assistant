@@ -1,6 +1,7 @@
 """Only explicit own-clip sources can be transferred; encoded streams are skipped."""
 
 import json
+from urllib.parse import urlencode
 
 import pytest
 
@@ -29,6 +30,69 @@ def own_page(**changes):
         + json.dumps([1, flight], separators=(",", ":"))
         + ")</script>"
     )
+
+
+def upload_fields():
+    asset = OTHER + "_0"
+    query = urlencode(
+        {
+            "src": "suno-data-uploads/studio/uploads/" + asset + ".m4a",
+            "sig": "a" * 43,
+            "kid": "1",
+        }
+    )
+    return {
+        "video_url": "https://cdn1.suno.ai/" + asset + ".mp4",
+        "media_urls": [
+            {
+                "url": "https://d2lwuy8qc234o3.cloudfront.net/1/clip/" + ID + ".m4a?" + query,
+                "encoding": "1.0.0",
+                "delivery": "progressive",
+                "content_type": "m4a-opus",
+            }
+        ],
+    }
+
+
+def test_upload_asset_requires_structural_own_clip_source_binding():
+    fields = upload_fields()
+    assert published_sources(own_page(**fields), ID)[0] == [fields["video_url"]]
+    fields["media_urls"][0]["url"] = fields["media_urls"][0]["url"].replace(ID, OTHER)
+    assert published_sources(own_page(**fields), ID)[0] == []
+
+
+@pytest.mark.parametrize("change", ["asset", "duplicate_src", "host", "encoding", "missing_public"])
+def test_upload_binding_rejects_ambiguous_or_unproven_sources(change):
+    fields = upload_fields()
+    if change == "asset":
+        fields["video_url"] = fields["video_url"].replace(OTHER, ID)
+    elif change == "duplicate_src":
+        fields["media_urls"][0]["url"] += "&src=other"
+    elif change == "host":
+        fields["video_url"] = fields["video_url"].replace("cdn1.suno.ai", "evil.cloudfront.net")
+    elif change == "encoding":
+        fields["media_urls"][0]["encoding"] = "future"
+    else:
+        fields["is_public"] = None
+    assert published_sources(own_page(**fields), ID)[0] == []
+
+
+def test_lyrics_cannot_forge_upload_source_binding():
+    fields = upload_fields()
+    fake = {
+        "clip": {
+            "id": ID,
+            "title": "Forged",
+            "entity_type": "song_schema",
+            "is_public": True,
+            **fields,
+        }
+    }
+    text = json.dumps(fake) + "\n"
+    frame = "aa:T" + format(len(text.encode()), "x") + "," + text
+    html = own_page(video_url="")
+    html += "<script>self.__next_f.push(" + json.dumps([1, frame]) + ")</script>"
+    assert published_sources(html, ID)[0] == []
 
 
 def test_encoded_audio_is_not_downloaded_and_published_video_is_bound_to_own_uuid():
@@ -75,9 +139,10 @@ def test_plain_published_audio_precedes_video():
     assert urls == [url, "https://cdn1.suno.ai/" + ID + ".mp4"]
 
 
+@pytest.mark.parametrize("uploaded", [False, True])
 @pytest.mark.parametrize("cover_available", [True, False])
 async def test_published_video_extracts_audio_and_cover_without_retaining_video(
-    tmp_path, mock_http, image, cover_available
+    tmp_path, mock_http, image, cover_available, uploaded
 ):
     import subprocess
 
@@ -121,7 +186,11 @@ async def test_published_video_extracts_audio_and_cover_without_retaining_video(
         requested.append(str(request.url))
         if request.url.host == "suno.com":
             return httpx.Response(
-                200, text=own_page(image_large_url="https://cdn2.suno.ai/cover.jpeg")
+                200,
+                text=own_page(
+                    image_large_url="https://cdn2.suno.ai/cover.jpeg",
+                    **(upload_fields() if uploaded else {}),
+                ),
             )
         if request.url.path.endswith(".mp4"):
             return httpx.Response(200, content=video.read_bytes())

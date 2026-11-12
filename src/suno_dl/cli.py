@@ -7,8 +7,11 @@ import functools
 import inspect
 import logging
 import re
+import signal
+import sys
+import threading
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Coroutine, Sequence
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -24,6 +27,7 @@ from .discovery import (
     discover_profile_tracks,
     fetch_profile_feed_page,
 )
+from .download_failures import RETRY_PREFIX
 from .download_intent import UnsafeDownloadIntent, WindowsArchiveWriteUnavailable
 from .downloader import download_tracks, resolve_output_dir
 from .errors import (
@@ -183,6 +187,35 @@ async def _expand_profile_playlists(
                 rate_limiter=fetcher.rate_limiter,
             )
 
+        async def complete_discovery():
+            from dataclasses import replace
+
+            from .playlists import discover_profile_playlists
+            from .profile_playlists import (
+                discover_cursor_playlists,
+                fetch_public_profile_playlists_page,
+            )
+
+            async def cursor_page(user_id, cursor):
+                return await fetch_public_profile_playlists_page(
+                    user_id,
+                    cursor,
+                    timeout_sec=cfg.timeout_sec,
+                    rate_limiter=fetcher.rate_limiter,
+                )
+
+            try:
+                return await discover_cursor_playlists(fetch_html, cursor_page, handle)
+            except Exception as exc:
+                # Preserve bounded legacy discovery, but never claim its
+                # repeated static playlist list proves complete coverage.
+                fallback = await discover_profile_playlists(fetch_page)
+                return replace(
+                    fallback,
+                    truncated=True,
+                    reason=f"Complete public playlist listing unavailable ({type(exc).__name__})",
+                )
+
         expansion = await expand_public_playlists(
             fetch_page,
             fetch_html,
@@ -191,6 +224,7 @@ async def _expand_profile_playlists(
             known_ids=[track.id for track in tracks],
             on_membership=on_membership,
             persist=not dry_run,
+            discover_playlists=complete_discovery,
         )
 
     click.echo(
@@ -199,7 +233,8 @@ async def _expand_profile_playlists(
         f"expanded={expansion.playlists_expanded} "
         f"skipped={expansion.playlists_skipped} "
         f"unresolved={expansion.playlists_unresolved} "
-        f"tracks={len(expansion.tracks)}"
+        f"tracks={len(expansion.tracks)} "
+        f"excluded={len(expansion.excluded_ids)}"
     )
     # Name the listings that could not be read: an unresolved playlist is a
     # gap in the archive, and silence would read as "that playlist was empty".
@@ -210,7 +245,8 @@ async def _expand_profile_playlists(
             f"  ... and {len(expansion.unresolved) - 10} more unresolved playlist(s)",
             err=True,
         )
-    return tracks + expansion.tracks, expansion.counts()
+    combined = [t for t in tracks + expansion.tracks if t.id not in expansion.excluded_ids]
+    return combined, expansion.counts()
 
 
 async def _source_playlist_tracks(fetcher: Fetcher, url: str) -> list[TrackInfo]:
@@ -452,6 +488,43 @@ def _safe_fatal_source_error(exc: Exception) -> str:
     return f"unexpected {type(exc).__name__}"
 
 
+def _run_cancellable_sync(
+    operation: Coroutine[Any, Any, list[tuple[str, dict[str, int]]]],
+) -> list[tuple[str, dict[str, int]]]:
+    """Unwind Linux sync on the SIGTERM sent by the WebUI Cancel action."""
+
+    async def run() -> list[tuple[str, dict[str, int]]]:
+        if (
+            not sys.platform.startswith("linux")
+            or threading.current_thread() is not threading.main_thread()
+        ):
+            return await operation
+        task = asyncio.current_task()
+        if task is None:
+            return await operation
+        loop = asyncio.get_running_loop()
+        stopping = False
+
+        def stop(_signum: int, _frame: object) -> None:
+            nonlocal stopping
+            if not stopping:
+                stopping = True
+                # Queue cancellation even while a synchronous media operation is running.
+                loop.call_soon_threadsafe(task.cancel)
+
+        previous = signal.signal(signal.SIGTERM, stop)
+        try:
+            return await operation
+        except asyncio.CancelledError:
+            if stopping:
+                raise SystemExit(128 + signal.SIGTERM) from None
+            raise
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+
+    return asyncio.run(run())
+
+
 async def _run_sync(
     cfg: Config,
     watch_entries: list[str],
@@ -480,6 +553,7 @@ async def _run_sync(
     update_existing: bool = False,
     force_redownload: bool = False,
     playlists: bool = False,
+    blocked_path: Path | None = None,
 ) -> list[tuple[str, dict[str, int]]]:
     """Sync every watch-list entry sequentially; one source's failure must not
     abort the rest. Returns per-source stats in the same order as the input."""
@@ -496,6 +570,22 @@ async def _run_sync(
                 "Invalid watch-list source; expected a handle or public Suno URL"
             ) from None
         display_url = redact_url(url)
+        clip_id = (
+            urlparse(url).path.rstrip("/").rsplit("/", 1)[-1].lower()
+            if _url_kind(url) == "song"
+            else None
+        )
+        if (
+            clip_id
+            and blocked_path is not None
+            and (clip_id in blocked_ids or clip_id in load_blocked_ids(blocked_path))
+        ):
+            if not dry_run:
+                click.echo(f"{RETRY_PREFIX}{clip_id} skipped")
+            results.append((display_url, {"total": 1, "skipped_blocked": 1}))
+            continue
+        if clip_id and not dry_run:
+            click.echo(f"{RETRY_PREFIX}{clip_id} working")
         click.echo(f"Syncing {display_url} ...")
         try:
             stats = await _run(
@@ -547,6 +637,12 @@ async def _run_sync(
             raise RuntimeError(
                 f"Syncing {display_url} failed: {_safe_fatal_source_error(exc)}"
             ) from None
+        if clip_id and not dry_run and not (stats.get("downloaded") or stats.get("skipped_exists")):
+            skipped = any(
+                stats.get(key)
+                for key in ("skipped_blocked", "skipped_rotated", "skipped_capped", "skipped_video")
+            )
+            click.echo(f"{RETRY_PREFIX}{clip_id} {'skipped' if skipped else 'failed'}")
         results.append((handle or display_url, stats))
     return results
 
@@ -916,7 +1012,7 @@ def download_cmd(
                     "--sync needs a watch list: set SUNO_WATCH=handle1,handle2 "
                     "in .env or pass --watch (repeatable)."
                 )
-            results = asyncio.run(
+            results = _run_cancellable_sync(
                 _run_sync(
                     cfg,
                     entries,
@@ -945,6 +1041,7 @@ def download_cmd(
                     update_existing=update_existing,
                     force_redownload=force_redownload,
                     playlists=playlists,
+                    blocked_path=blocked_path,
                 )
             )
             totals: dict[str, int] = {}

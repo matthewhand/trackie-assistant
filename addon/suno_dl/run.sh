@@ -15,6 +15,20 @@ OPTIONS=/data/options.json
 # JSON escapes controls and is one line; clear the variable before children run.
 TRACKIE_ADDON_OPTIONS_SNAPSHOT="$(python3 -c 'import json; print(json.dumps(json.load(open("/data/options.json")), ensure_ascii=True, separators=(",", ":")))')"
 export TRACKIE_ADDON_OPTIONS_SNAPSHOT
+# Remote mode is an ingress client only: exit into the proxy before creating
+# an archive, writing dotenv settings, or starting any local sync loop.
+BACKEND_MODE="$(python3 -c '
+import json, os, sys
+mode = json.loads(os.environ["TRACKIE_ADDON_OPTIONS_SNAPSHOT"]).get("backend_mode", "local")
+if mode not in ("local", "remote"):
+    sys.exit("Invalid backend mode")
+print(mode)
+')"
+if [ "$BACKEND_MODE" = "remote" ]; then
+  unset TRACKIE_ADDON_OPTIONS_SNAPSHOT
+  exec python3 -m suno_dl.ha_backend_proxy --options "$OPTIONS"
+fi
+
 # SUNO_WATCH is comma-delimited and is also stored in a dotenv file. Reject
 # control characters, delimiters and malformed URLs before emitting either.
 PROFILES="$(python3 -c '

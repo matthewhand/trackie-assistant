@@ -8,8 +8,8 @@
 **Save cloud music locally** (currently Suno), then listen with your player
 of choice, like Music Assistant.
 
-> **Linux preview 1.6.2rc2** · Python 3.13+ · AMD64 containers/add-on<br>
-> [Download the release](https://github.com/matthewhand/trackie-assistant/releases/tag/v1.6.2rc2) · [Release notes and limits](docs/releases/v1.6.2rc2.md)
+> **Linux preview 1.6.2rc16** · Python 3.13+ · AMD64 containers/add-on<br>
+> [Download the release](https://github.com/matthewhand/trackie-assistant/releases/tag/v1.6.2rc16) · [Release notes and limits](docs/releases/v1.6.2rc16.md)
 
 ## What you get
 
@@ -81,3 +81,5 @@ Archive only music you own or have permission to download. Public sources only;
 no account sign-in, cookies or private media decryption.
 
 [MIT license](LICENSE).
+
+Scheduled checks can be paused or reconfigured in the Sync tab. [Backend and HAOS setup](docs/scheduled-sync.md).

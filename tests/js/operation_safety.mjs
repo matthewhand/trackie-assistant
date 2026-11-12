@@ -12,6 +12,7 @@ const doc = {
     if (!elements.has(id)) elements.set(id, {
       textContent: "", innerHTML: "", disabled: false, hidden: false,
       checked: false, value: "", dataset: { state: "checking" },
+      querySelectorAll() { return []; },
     });
     return elements.get(id);
   },

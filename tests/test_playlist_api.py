@@ -166,13 +166,15 @@ async def test_api_rejects_nonpublic_playlist(field: str, value: object) -> None
         ("entity_type", "other"),
     ],
 )
-async def test_api_rejects_nonpublic_or_unsupported_clip(field: str, value: object) -> None:
+async def test_api_excludes_nonpublic_or_unsupported_clip(field: str, value: object) -> None:
     playlist_id = _uuid(1)
     playlist = PlaylistRef(playlist_id, "Hidden clip", track_count=1)
     payload = _payload(playlist_id, 1, 1, [])
     payload["playlist_clips"] = [_entry(_uuid(2), **{field: value})]
     result, _ = await _membership(playlist, {1: payload})
-    assert not result.resolved
+    assert result.resolved
+    assert result.ids == ()
+    assert result.excluded_ids == (_uuid(2),)
 
 
 async def test_api_rejects_identity_count_page_duplicate_and_invalid_id() -> None:
@@ -367,21 +369,16 @@ async def test_html_without_verifiable_count_uses_api_as_authority() -> None:
     assert result.ids == (_uuid(2), _uuid(3))
 
 
-async def test_profile_count_verifies_html_without_page_count() -> None:
-    """A trusted feed count is sufficient; avoid unnecessary API requests."""
+async def test_matching_html_count_cannot_bypass_explicit_api_visibility() -> None:
     playlist_id = _uuid(1)
     profile = PlaylistRef(playlist_id, "Known size", track_count=2)
     html = f'<a href="/song/{_uuid(2)}">two</a><a href="/song/{_uuid(3)}">three</a>'
-
-    async def fetch_html(url: str) -> str:
-        return html
-
-    async def should_not_call_api(playlist: PlaylistRef, page: int) -> dict:
-        raise AssertionError("complete, feed-verified HTML must not fetch API")
-
-    result = await fetch_playlist_membership(fetch_html, profile, should_not_call_api)
-    assert result.resolved
-    assert result.ids == (_uuid(2), _uuid(3))
+    payload = _payload(playlist_id, 1, 2, [_uuid(2), _uuid(3)])
+    payload["playlist_clips"][1]["clip"]["is_public"] = False
+    result, calls = await _membership(profile, {1: payload}, html)
+    assert calls == [1]
+    assert result.resolved and result.ids == (_uuid(2),)
+    assert result.excluded_ids == (_uuid(3),)
 
 
 async def test_profile_count_disagrees_with_explicit_empty_html_without_api() -> None:
@@ -501,7 +498,12 @@ async def test_api_rejects_contradictory_visibility_markers(
     obj = payload if target == "playlist" else payload["playlist_clips"][0]["clip"]
     obj[field] = value
     result, _ = await _membership(playlist, {1: payload})
-    assert not result.resolved
+    if target == "playlist":
+        assert not result.resolved
+    else:
+        assert result.resolved
+        assert result.ids == ()
+        assert result.excluded_ids == (_uuid(2),)
 
 
 async def test_api_membership_preserves_clip_producer_identity() -> None:
@@ -595,3 +597,57 @@ async def test_http_accepts_valid_finite_float() -> None:
         _uuid(1), 1, timeout_sec=1, rate_limiter=HostRateLimiter(0), transport_factory=factory
     )
     assert payload == {"value": 125.0}
+
+
+async def test_mixed_playlist_counts_exclusions_across_pages_and_keeps_public_order() -> None:
+    playlist_id = _uuid(1)
+    pages = {
+        1: _payload(playlist_id, 1, 4, [_uuid(2), _uuid(3)]),
+        2: _payload(playlist_id, 2, 4, [_uuid(4), _uuid(5)]),
+    }
+    pages[1]["playlist_clips"][1]["clip"]["is_public"] = False
+    pages[2]["playlist_clips"][0]["clip"]["is_hidden"] = True
+    result, calls = await _membership(PlaylistRef(playlist_id, "Mixed", track_count=4), pages)
+    assert result.resolved
+    assert result.ids == (_uuid(2), _uuid(5))
+    assert result.excluded_ids == (_uuid(3), _uuid(4))
+    assert calls == [1, 2]
+
+    # Exclusions never excuse a missing page or an inconsistent provider count.
+    pages[2]["playlist_clips"] = []
+    result, _ = await _membership(PlaylistRef(playlist_id, "Mixed", track_count=4), pages)
+    assert not result.resolved
+
+
+async def test_later_playlist_exclusion_removes_earlier_membership(tmp_path: Path) -> None:
+    first, second = _uuid(1), _uuid(2)
+    public, unavailable = _uuid(3), _uuid(4)
+
+    async def feed(page: int) -> dict:
+        return {
+            "num_total_playlists": 2,
+            "playlists": [{"id": first, "name": "First"}, {"id": second, "name": "Second"}],
+        }
+
+    async def html(url: str) -> str:
+        return "<html>Public playlist</html>"
+
+    async def api(ref: PlaylistRef, page: int) -> dict:
+        payload = _payload(ref.id, page, 2, [public, unavailable])
+        if ref.id == second:
+            payload["playlist_clips"][1]["clip"]["is_public"] = False
+        return payload
+
+    recorded: dict[str, tuple[str, ...]] = {}
+    expansion = await playlists.expand_public_playlists(
+        feed,
+        html,
+        checkpoint=playlists.PlaylistCheckpoint(tmp_path),
+        fetch_api_page=api,
+        on_membership=lambda ref, ids: recorded.update({ref.id: tuple(ids)}),
+    )
+    assert [t.id for t in expansion.tracks] == [public]
+    assert expansion.excluded_ids == {unavailable}
+    assert recorded == {first: (public,), second: (public,)}
+    assert expansion.playlists_unresolved == 0
+    assert expansion.counts()["playlist_tracks_excluded"] == 1

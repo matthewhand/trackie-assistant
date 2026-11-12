@@ -65,6 +65,9 @@ export function initViewModes(doc, storage) {
     || Object.values(picks).some((item) => !item)) return null;
 
   let settings = readPreferences(storage);
+  const requested = new URL(doc.defaultView?.location?.href || "http://localhost/")
+    .searchParams.get("section");
+  if (FEATURE_IDS.includes(requested)) settings.panel = requested;
   let lastFocusedPanel = null;
   let lastFocusedElement = null;
   const narrow = () => !!doc.defaultView?.matchMedia?.("(max-width: 1199px)").matches;

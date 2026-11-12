@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.2rc16
+
+- Show 50 songs per page in the WebUI and the Home Assistant card, with search, genre filters and sorting across the live archive.
+- When Retry all is cancelled during download or tagging, keep completed tracks counted and leave unfinished tracks eligible for retry.
+- Persist failed tracks, skip decisions and the last Retry all result across restarts. Manage automatic syncing from the Sync panel.
+- Improve public playlist discovery and use a published video as an audio source when needed.
+
+See the [release notes](docs/releases/v1.6.2rc16.md) for setup and preview limits.
+
+## 1.6.2rc3 (local candidate)
+
+- Persistent, editable sync scheduling with one shared run manager.
+- HAOS ingress client for a pinned HTTPS backend, without a second downloader.
+
 ## 1.6.2rc2 — 2026-11-07
 
 - Limit explicitly approved playlist retries to the exact missing clip IDs; refuse changed scope before transfers.

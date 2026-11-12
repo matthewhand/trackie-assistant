@@ -20,7 +20,7 @@ const elements = new Map();
 function genericNode() {
   return { textContent: "", innerHTML: "", disabled: false, checked: false,
     value: "", dataset: {state:"checking"}, hidden: false, children: [], appendChild(n) { this.children.push(n); },
-    append(n) { this.children.push(n); },
+    append(n) { this.children.push(n); }, querySelectorAll() { return []; },
     replaceChildren(...nodes) { this.children = nodes; },
     classList: { add() {}, remove() {} } };
 }
@@ -61,6 +61,10 @@ const announcer = {
   set textContent(value) { this._text = value; announcements.push(value); },
 };
 const doc = { activeElement: null,
+  dispatchEvent(event) {
+    assert.equal(event.type, "trackie-sync-failures");
+    assert.ok(Array.isArray(event.detail.failures));
+  },
   createElement() { return genericNode(); },
   getElementById(id) {
     if (id === "opbar") return bar;
@@ -76,6 +80,9 @@ function deferred() {
 }
 const sandbox = {
   document: doc, URLSearchParams, Date, navigator: {},
+  CustomEvent: class {
+    constructor(type, { detail }) { this.type = type; this.detail = detail; }
+  },
   setInterval() { throw Error("timer must not start in synthetic fixture"); },
   fetch: async (url) => {
     assert.ok(replies.length, "unmocked network call: " + url);

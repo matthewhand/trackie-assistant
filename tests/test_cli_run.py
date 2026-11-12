@@ -569,3 +569,53 @@ async def test_run_sync_does_not_echo_secrets_from_fatal_error(
     assert "SOURCE_SECRET" not in output
     assert "OTHER_SECRET" not in output
     assert "?...redacted" in output
+
+
+async def test_song_queue_checks_current_skip_list(tmp_path, monkeypatch, capsys):
+    from suno_dl.errors import DownloadError
+
+    first, skipped, failed, last = (
+        f"00000000-0000-4000-8000-{number:012}" for number in range(1, 5)
+    )
+    blocked_path = tmp_path / ".blocked"
+    seen = []
+
+    async def fake_run(url, *args, **kwargs):
+        clip = url.rsplit("/", 1)[-1]
+        seen.append((clip, kwargs["pacer"]))
+        if clip == first:
+            blocked_path.write_text(skipped + "\n")
+        if clip == failed:
+            raise DownloadError("unavailable")
+        return {"total": 1, "downloaded": 1, "failed": 0}
+
+    monkeypatch.setattr(cli_mod, "_run", fake_run)
+    await _run_sync(
+        _cfg(tmp_path),
+        [f"https://suno.com/song/{clip}" for clip in (first, skipped, failed, last)],
+        limit=None,
+        pattern="{title}",
+        concurrency=1,
+        dry_run=False,
+        browser=False,
+        fmt=None,
+        audio_only=True,
+        covers=False,
+        rate_limit=None,
+        flat=False,
+        extract_audio=False,
+        lyrics_sidecar=None,
+        blocked_path=blocked_path,
+    )
+    assert [clip for clip, _ in seen] == [first, failed, last]
+    assert seen[0][1] is not None and all(pacer is seen[0][1] for _, pacer in seen)
+    events = [
+        line for line in capsys.readouterr().out.splitlines() if line.startswith("TRACKIE_RETRY ")
+    ]
+    assert events == [
+        f"TRACKIE_RETRY {first} working",
+        f"TRACKIE_RETRY {skipped} skipped",
+        f"TRACKIE_RETRY {failed} working",
+        f"TRACKIE_RETRY {failed} failed",
+        f"TRACKIE_RETRY {last} working",
+    ]

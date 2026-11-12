@@ -13,12 +13,14 @@ bulk import resumes instead of restarting.
 Rules that are not negotiable
 -----------------------------
 * Only public data is read: the anonymous profile feed and public playlist
-  pages. The sole API exception is an unauthenticated GET to the exact
+  pages. Membership uses an unauthenticated GET to the exact
   https://studio-api.prod.suno.com/api/playlist/{uuid}/?page=N endpoint
   for membership only. Each request uses a fresh client, no cookies or auth,
   exact-host HTTPS validation, no redirects, a byte cap and bounded paging.
-  No other API path is permitted. Hidden, private, unlisted, trashed or deleted
-  listings and clips fail closed.
+  Profile enumeration also uses the fixed anonymous read-only View all feed
+  query in profile_playlists.py. Hidden, private, unlisted, trashed or deleted
+  listings fail closed; unavailable clips are excluded without losing public
+  neighbours. Missing pages and malformed membership remain unresolved.
 * A listing that yields no song ids is **unresolved**, never "zero songs",
   unless the page explicitly reports zero or the exact API fallback verifies
   an empty public membership. Partial or ambiguous results never complete.
@@ -112,6 +114,7 @@ class PlaylistMembership:
     playlist: PlaylistRef
     tracks: tuple[TrackInfo, ...] = ()
     reason: str | None = None
+    excluded_ids: tuple[str, ...] = ()
 
     @property
     def resolved(self) -> bool:
@@ -132,6 +135,7 @@ class PlaylistExpansion:
     playlists_skipped: int = 0
     playlists_unresolved: int = 0
     unresolved: list[tuple[str, str]] = field(default_factory=list)
+    excluded_ids: set[str] = field(default_factory=set)
 
     def counts(self) -> dict[str, int]:
         return {
@@ -140,6 +144,7 @@ class PlaylistExpansion:
             "playlists_skipped": self.playlists_skipped,
             "playlists_unresolved": self.playlists_unresolved,
             "playlist_tracks": len(self.tracks),
+            "playlist_tracks_excluded": len(self.excluded_ids),
         }
 
 
@@ -421,8 +426,6 @@ async def _fetch_public_api_membership(
             if not isinstance(entry, dict) or not isinstance(entry.get("clip"), dict):
                 raise PublicPlaylistApiError("playlist membership contained a malformed clip")
             clip = entry["clip"]
-            if clip.get("entity_type") != "song_schema":
-                raise PublicPlaylistApiError("playlist contained an unsupported clip schema")
             clip_id = _playlist_id(clip.get("id"))
             if clip_id is None:
                 raise PublicPlaylistApiError("playlist contained an invalid song UUID")
@@ -432,7 +435,8 @@ async def _fetch_public_api_membership(
             if len(seen_ids) > total:
                 raise PublicPlaylistApiError("playlist returned more clips than its reported total")
             if (
-                clip.get("is_public") is not True
+                clip.get("entity_type") != "song_schema"
+                or clip.get("is_public") is not True
                 or clip.get("is_hidden") is not False
                 or clip.get("is_trashed") is not False
                 or not _playlist_item_public(clip)
@@ -475,15 +479,37 @@ async def fetch_playlist_membership(
     playlist: PlaylistRef,
     fetch_api_page: Callable[[PlaylistRef, int], Awaitable[dict[str, Any]]] | None = None,
 ) -> PlaylistMembership:
-    """Read public membership, using one tightly scoped anonymous API fallback.
+    """Read public membership, preferring explicit anonymous API visibility.
 
-    HTML links or unanchored page count text alone do not prove completeness.
+    With an API reader, every row must pass its explicit visibility checks;
+    matching HTML counts cannot bypass them. Without one, HTML links or
+    unanchored page count text alone do not prove completeness.
     A non-empty HTML result requires a valid count from the public profile
     feed, with agreement against any page count. Otherwise the optional
     exact-endpoint API fallback must verify identity, visibility, every clip
     UUID, pagination and the full count. Any ambiguity remains unresolved
     rather than becoming a false completion or false zero.
     """
+    if fetch_api_page is not None:
+        excluded: set[str] = set()
+        try:
+            # This API has independently verified playlist identity, visibility,
+            # pagination and the feed total. An unanchored HTML "N songs"
+            # phrase is not trusted evidence that can veto those results.
+            api_tracks = await _fetch_public_api_membership(
+                fetch_api_page, playlist, on_excluded=excluded.add
+            )
+        except Exception as exc:  # noqa: BLE001 - fail closed per playlist
+            detail = str(exc) if isinstance(exc, PublicPlaylistApiError) else exc.__class__.__name__
+            reason = f"public playlist API fallback unresolved ({detail})"
+            logger.warning("Playlist %r unresolved: %s", playlist.name, reason)
+            return PlaylistMembership(
+                playlist=playlist, reason=reason, excluded_ids=tuple(sorted(excluded))
+            )
+        return PlaylistMembership(
+            playlist=playlist, tracks=api_tracks, excluded_ids=tuple(sorted(excluded))
+        )
+
     try:
         html = await fetch_html(playlist.url)
     except Exception as exc:  # noqa: BLE001 - one playlist must not abort a run
@@ -507,19 +533,6 @@ async def fetch_playlist_membership(
 
     if not tracks and stated == 0 and playlist.track_count == 0 and fetch_api_page is None:
         return PlaylistMembership(playlist=playlist)
-
-    if fetch_api_page is not None:
-        try:
-            # This API has independently verified playlist identity, visibility,
-            # pagination and the feed total. An unanchored HTML "N songs"
-            # phrase is not trusted evidence that can veto those results.
-            api_tracks = await _fetch_public_api_membership(fetch_api_page, playlist)
-        except Exception as exc:  # noqa: BLE001 - fail closed per playlist
-            detail = str(exc) if isinstance(exc, PublicPlaylistApiError) else exc.__class__.__name__
-            reason = f"public playlist API fallback unresolved ({detail})"
-            logger.warning("Playlist %r unresolved: %s", playlist.name, reason)
-            return PlaylistMembership(playlist=playlist, reason=reason)
-        return PlaylistMembership(playlist=playlist, tracks=api_tracks)
 
     if tracks:
         reason = f"page reports {stated} songs but exposed {len(tracks)} ids"
@@ -645,6 +658,7 @@ async def expand_public_playlists(
     max_tracks: int = MAX_PLAYLIST_TRACKS,
     on_membership: Callable[[PlaylistRef, Sequence[str]], None] | None = None,
     persist: bool = True,
+    discover_playlists: Callable[[], Awaitable[PlaylistDiscovery]] | None = None,
 ) -> PlaylistExpansion:
     """Expand a profile into public playlists, revalidating membership each run.
 
@@ -654,8 +668,12 @@ async def expand_public_playlists(
     separate membership recording belongs. ``persist=False`` (dry-run) reads
     the checkpoint but never writes it, so a preview cannot mask a real run.
     """
-    discovery = await discover_profile_playlists(
-        fetch_page, max_pages=max_pages, max_playlists=max_playlists
+    discovery = (
+        await discover_playlists()
+        if discover_playlists
+        else await discover_profile_playlists(
+            fetch_page, max_pages=max_pages, max_playlists=max_playlists
+        )
     )
     expansion = PlaylistExpansion(playlists_found=len(discovery.playlists))
     if discovery.truncated:
@@ -665,6 +683,7 @@ async def expand_public_playlists(
         )
     seen = {clip.lower() for clip in known_ids}
 
+    resolved_memberships: list[PlaylistMembership] = []
     for playlist in discovery.playlists:
         # The checkpoint records discovery, not successful downloads. Always
         # recheck membership: an interrupted run may not have saved the tracks,
@@ -674,6 +693,7 @@ async def expand_public_playlists(
             expansion.unresolved.append((playlist.name, "track cap reached"))
             break
         membership = await fetch_playlist_membership(fetch_html, playlist, fetch_api_page)
+        expansion.excluded_ids.update(membership.excluded_ids)
         if not membership.resolved:
             expansion.playlists_unresolved += 1
             expansion.unresolved.append((playlist.name, membership.reason or "unresolved listing"))
@@ -691,18 +711,22 @@ async def expand_public_playlists(
             continue
 
         expansion.playlists_expanded += 1
-        if on_membership is not None:
-            # Resolved and empty is a real answer: record the empty membership
-            # rather than leaving a stale one behind.
-            on_membership(playlist, membership.ids)
+        resolved_memberships.append(membership)
         for track in membership.tracks:
             if track.id in seen:
                 continue
             seen.add(track.id)
             expansion.tracks.append(track)
+    # A negative visibility result applies across all playlists in this run.
+    # Delay recording membership so a later exclusion cannot be reintroduced
+    # by a previously resolved playlist or the profile feed.
+    expansion.tracks = [t for t in expansion.tracks if t.id not in expansion.excluded_ids]
+    for membership in resolved_memberships:
+        ids = tuple(i for i in membership.ids if i not in expansion.excluded_ids)
+        if on_membership is not None:
+            on_membership(membership.playlist, ids)
         if persist:
-            checkpoint.mark_complete(playlist, len(membership.tracks))
-
+            checkpoint.mark_complete(membership.playlist, len(ids))
     if persist:
         checkpoint.save()
     return expansion
