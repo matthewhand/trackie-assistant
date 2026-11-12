@@ -30,7 +30,7 @@ RUN set -eu; \
         exit 1; \
     fi; \
     if [ "$INSTALL_BROWSER" = "1" ]; then \
-        apk add --no-cache libnspr libnss libatk-1.0 libatk-bridge-2.0 libxfixes libudev at-spi2-core libxcomposite libxdamage libxrandr mesa-gbm alsa-lib pango libxkbcommon fontconfig ttf-dejavu; \
+        apk add --no-cache libatomic libnspr libnss libatk-1.0 libatk-bridge-2.0 libxfixes libudev at-spi2-core libxcomposite libxdamage libxrandr mesa-gbm alsa-lib pango libxkbcommon fontconfig ttf-dejavu; \
         pip install --no-cache-dir /tmp/incoming/*.whl 'mutagen>=1.47.0' 'playwright>=1.42.0'; \
         playwright install --only-shell chromium; \
         python -c "from pathlib import Path; import shutil; [shutil.rmtree(p) for p in Path('/opt/playwright').glob('ffmpeg-*') if p.is_dir() and not p.is_symlink()]"; \

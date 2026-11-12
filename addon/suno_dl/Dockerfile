@@ -18,7 +18,7 @@ RUN python -c 'import sys; assert sys.version_info[:2] == (3, 13), sys.version' 
 
 # Chromium runtime libraries are APK-managed; Playwright supplies its matched
 # headless browser. No obsolete system Chromium or unused recorder is shipped.
-RUN apk add --no-cache nss at-spi2-core libxcomposite libxdamage libxrandr mesa-gbm alsa-lib pango libxkbcommon fontconfig ttf-dejavu
+RUN apk add --no-cache libatomic nss at-spi2-core libxcomposite libxdamage libxrandr mesa-gbm alsa-lib pango libxkbcommon fontconfig ttf-dejavu
 
 COPY trackie_assistant-*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/trackie_assistant-*.whl 'playwright>=1.42.0' 'mutagen>=1.47.0' \
